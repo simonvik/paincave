@@ -5,7 +5,7 @@ from ant.core import driver, node, event, message, log
 from ant.core.constants import CHANNEL_TYPE_TWOWAY_RECEIVE, TIMEOUT_NEVER
 
 class HRM(event.EventCallback):
- 
+
     def __init__(self, netkey):
         self.netkey = netkey
         self.antnode = None
@@ -40,6 +40,7 @@ class HRM(event.EventCallback):
  
     def _setup_channel(self):
         key = node.NetworkKey('N:ANT+', self.netkey)
+	self.antnode.registerEventListener(self)
         self.antnode.setNetworkKey(0, key)
         self.channel_cs = self.antnode.getFreeChannel()
         self.channel_cs.name = 'C:CAD'
@@ -49,8 +50,17 @@ class HRM(event.EventCallback):
         self.channel_cs.setPeriod(8086)
         self.channel_cs.setFrequency(57)
         self.channel_cs.open()
+
+    def process_events(self, msg):
+	print msg
  
     def process(self, msg):
+	#print(msg.payload)
+	#return 
+	#if isinstance(msg, message.ChannelEventMessage):
+	#    print(msg.getMessageID())
+	#    print(msg.getMessageCode())
+        #    print(msg.payload)
 
         if isinstance(msg, message.ChannelBroadcastDataMessage):
 
@@ -67,7 +77,7 @@ class HRM(event.EventCallback):
 		
 		self.lastCad["time"] = BikeCadEventTime
 		self.lastCad["count"] = BikeCadEventCount
-		
+		print "bajs"
                 print cad		
 
 
