@@ -37,10 +37,16 @@
     }
 
     function output(str) {
-      var hr = document.getElementById("hr");
+        var hr = document.getElementById("hr");
+        var cad = document.getElementById("cad");
+        var speed = document.getElementById("speed");
       var msg = JSON.parse(str)
       if(msg.event_type == "hr")
         hr.innerHTML = msg.value;
+         if(msg.event_type == "cad")
+        cad.innerHTML = msg.value;
+             if(msg.event_type == "speed")
+        speed.innerHTML = msg.value;
     }
 
   </script>
@@ -51,6 +57,18 @@
 style="font-size:20px;color:#ccc;padding-left:10px;padding-right:20px;">Heart<br
 />Rate</h3></span>
 	<span><h1 id="hr" style="font-size:100px;padding:10px;"></h1></span>
+  </div>
+      <div id="log" style="background-color:#333; color:#fff; width:300px; height:200px;">
+	<span style="float:left;"><h3
+style="font-size:20px;color:#ccc;padding-left:10px;padding-right:20px;">Cad<br
+/>Rate</h3></span>
+	<span><h1 id="cad" style="font-size:100px;padding:10px;"></h1></span>
+  </div>
+      <div id="log" style="background-color:#333; color:#fff; width:300px; height:200px;">
+	<span style="float:left;"><h3
+style="font-size:20px;color:#ccc;padding-left:10px;padding-right:20px;">Speed<br
+/>Rate</h3></span>
+	<span><h1 id="speed" style="font-size:100px;padding:10px;"></h1></span>
   </div>
 </body>
 </html>
