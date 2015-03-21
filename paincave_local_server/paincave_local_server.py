@@ -2,6 +2,7 @@ import sys
 import time
 import struct
 import threading
+import json
 from pprint import pprint
 
 from websocket import WebSocketsServer
@@ -53,13 +54,15 @@ class ANT_SERVER(event.EventCallback):
         "device_id" : 121,
         "period" : 8086,
         "freq" : 57,
-        "ant_name" : "C:CAD"
+        "ant_name" : "C:CAD",
+        "handler" : "_handle_cad_speed"
       },
       "hr" : {
         "device_id" : 120,
         "period" : 8070,
         "freq" : 57,
-        "ant_name" : "C:HRM"
+        "ant_name" : "C:HRM",
+        "handler" : "_handle_hr"
       }
     }
 
@@ -108,8 +111,22 @@ class ANT_SERVER(event.EventCallback):
 
   def process(self, msg):
     if isinstance(msg, message.ChannelBroadcastDataMessage):
-      a = "{}".format(ord(msg.payload[-1]))
-      self.was.send_to_all(a)
+      for k,v in self.ant_modes.iteritems():
+        if int(v["device_id"]) is int(str(msg.getType()),16):
+          m = getattr(self, v["handler"])
+          if not m:
+            print("Handler not implemented :(")
+            return None
+          else:
+            m(msg)
+
+
+  def _handle_hr(self, msg):
+    hr = ord(msg.payload[-1])
+    msg = json.dumps({"event_type" : "hr", "value" : hr})
+    print("HR event %s" % msg)
+
+    self.was.send_to_all(msg)
 
 
   def __exit__(self, type_, value, traceback):
@@ -125,12 +142,9 @@ if __name__ == "__main__":
   ant_server = ANT_SERVER(netkey=NETKEY, ant_devices = ["hr"], was = websocket_ant_server)
   ant_server.start()
 
-
-
   while True:
     try:
       time.sleep(1)
-      print("sleeepy")
     except KeyboardInterrupt:
       ant_server.stop()
       websocket_ant_server.stop()
