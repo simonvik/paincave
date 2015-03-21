@@ -15,7 +15,7 @@ class WEBSOCKET_ANT_SERVER:
   def __init__(self):
     self.port = 13254
     self.server_thread = None
-    self.server = WebSocketsServer(self.port)
+    self.server = WebSocketsServer(self.port, "0.0.0.0")
     self.server.set_fn_new_client(self.client_connect)
     self.server.set_fn_client_left(self.client_left)
     self.server.set_fn_message_received(self.message_received)
@@ -26,9 +26,9 @@ class WEBSOCKET_ANT_SERVER:
     pass
 
   def start(self):
-      self.server_thread = threading.Thread(target=self.server.serve_forever)
-      self.server_thread.daemon = True
-      self.server_thread.start()
+    self.server_thread = threading.Thread(target=self.server.serve_forever)
+    self.server_thread.daemon = True
+    self.server_thread.start()
 
   def client_left(self, client, server):
     pass
@@ -81,7 +81,7 @@ class ANT_SERVER():
 
 
   def __enter__(self):
-        return self
+    return self
 
   def _setup_channels(self):
     self.antnode = Node()
@@ -100,22 +100,9 @@ class ANT_SERVER():
       c.on_broadcast_data = m
       c.on_burst_data = m
       c.open()
-
       self.channels.append(c)
+
     self.antnode.start()
-
-  def process(self, msg):
-    if isinstance(msg, message.ChannelBroadcastDataMessage):
-      print msg.getChannelNumber()
-      for k,v in self.ant_modes.iteritems():
-        if int(v["device_id"]) is int(str(msg.getType()),16):
-          m = getattr(self, v["handler"])
-
-          if not m:
-            print("Handler not implemented :(")
-            return None
-          else:
-            m(msg)
 
 
   def _handle_hr(self, msg):
