@@ -70,15 +70,14 @@ class ANT_SERVER():
     }
 
     #Semi temp-values, needs to diff
-    self.lastCad = {"time" : 0, "count" : 0}
-    self.lastSpeed = {"time" : 0, "count" : 0}
+    self.lastCad = {"time" : 0, "count" : -1}
+    self.lastSpeed = {"time" : 0, "count" : -1}
 
   def start(self):
     self._setup_channels()
 
   def stop(self):
     self.antnode.stop()
-
 
   def __enter__(self):
     return self
@@ -112,16 +111,21 @@ class ANT_SERVER():
 
     self.was.send_to_all(msg)
 
-  def _handle_cad_speed(self,msg):
+  def _handle_cad_speed(self, msg):
     #Can probably be written more nicely
 
     #CADENCE
-    BikeCadEventTime = (msg[1]) * 256 + (msg[0])
-    BikeCadEventCount = (msg[3]) * 256 + (msg[2])
+    BikeCadEventTime = msg[1] * 256 + msg[0]
+    BikeCadEventCount = msg[3] * 256 + msg[2]
+    BikeCadEventTimeDelta = BikeCadEventTime - self.lastCad["time"]
 
-    if BikeCadEventCount != self.lastCad["count"]:
-      print("im here")
-      cad = (60 * (BikeCadEventCount - self.lastCad["count"])*1024) / (BikeCadEventTime - self.lastCad["time"])
+    # ignore redundant, old or invalid data
+    if self.lastCad["count"] >= 0 \
+        and BikeCadEventCount != self.lastCad["count"] \
+        and BikeCadEventTimeDelta > 0 \
+        and BikeCadEventTimeDelta < 6000:
+      cad = (60 * (BikeCadEventCount - self.lastCad["count"]) * 1024) \
+            / BikeCadEventTimeDelta
       m = json.dumps({"event_type" : "cad", "value" : cad})
       self.was.send_to_all(m)
       print("CAD event %s" % m)
@@ -129,13 +133,17 @@ class ANT_SERVER():
     self.lastCad["time"] = BikeCadEventTime
     self.lastCad["count"] = BikeCadEventCount
 
-
     #SPEED
-    BikeSpeedEventTime = (msg[5]) * 256 + (msg[4])
-    BikeSpeedEventCount = (msg[7]) * 256 + (msg[6])
+    BikeSpeedEventTime = msg[5] * 256 + msg[4]
+    BikeSpeedEventCount = msg[7] * 256 + msg[6]
+    BikeSpeedEventTimeDelta = BikeSpeedEventTime - self.lastSpeed["time"]
 
-    if BikeSpeedEventCount != self.lastSpeed["count"]:
-      speed = (2.096 * (BikeSpeedEventCount - self.lastSpeed["count"])*1024) / (BikeSpeedEventTime - self.lastSpeed["time"])
+    # ignore redundant, old or invalid data
+    if self.lastSpeed["count"] >= 0 \
+        and BikeSpeedEventCount != self.lastSpeed["count"] \
+        and BikeSpeedEventTimeDelta > 0:
+      speed = (2.096 * (BikeSpeedEventCount - self.lastSpeed["count"]) * 1024) \
+              / BikeSpeedEventTimeDelta
       m = json.dumps({"event_type" : "speed", "value" : speed * 3.6})
       self.was.send_to_all(m)
       print("Speed event %s" % m)
@@ -154,7 +162,9 @@ if __name__ == "__main__":
   websocket_ant_server = WEBSOCKET_ANT_SERVER()
   websocket_ant_server.start()
 
-  ant_server = ANT_SERVER(netkey=NETKEY, ant_devices = ["hr", "cad_speed"], was = websocket_ant_server)
+  ant_server = ANT_SERVER(netkey=NETKEY, \
+                          ant_devices = ["hr", "cad_speed"], \
+                          was = websocket_ant_server)
   ant_server.start()
 
   while True:
