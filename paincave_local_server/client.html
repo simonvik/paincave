@@ -40,35 +40,46 @@
         var hr = document.getElementById("hr");
         var cad = document.getElementById("cad");
         var speed = document.getElementById("speed");
+        var watt = document.getElementById("watt");
       var msg = JSON.parse(str)
       if(msg.event_type == "hr")
-        hr.innerHTML = msg.value;
+        hr.innerHTML = Math.round(msg.value);
          if(msg.event_type == "cad")
-        cad.innerHTML = msg.value;
-             if(msg.event_type == "speed")
-        speed.innerHTML = msg.value;
+        cad.innerHTML = Math.round(msg.value);
+        if(msg.event_type == "speed"){
+            speed.innerHTML = Math.round(msg.value);
+            var  mph = msg.value * 0.621371;
+            var slope = 15.05;
+			var intercept = -45.86666667;
+			var trwatt = (slope * mph) + intercept;
+            watt.innerHTML = Math.round(trwatt);
+
+        }
     }
 
   </script>
 </head>
 <body onload="init();">
-  <div id="log" style="background-color:#333; color:#fff; width:300px; height:200px;">
+  <div id="log" style="background-color:#333; color:#fff; width:300px; height:200px;float:left; margin:10px;">
 	<span style="float:left;"><h3
 style="font-size:20px;color:#ccc;padding-left:10px;padding-right:20px;">Heart<br
 />Rate</h3></span>
 	<span><h1 id="hr" style="font-size:100px;padding:10px;"></h1></span>
   </div>
-      <div id="log" style="background-color:#333; color:#fff; width:300px; height:200px;">
+      <div id="log" style="background-color:#333; color:#fff; width:300px; height:200px;float:left; margin:10px;">
 	<span style="float:left;"><h3
-style="font-size:20px;color:#ccc;padding-left:10px;padding-right:20px;">Cad<br
-/>Rate</h3></span>
+style="font-size:20px;color:#ccc;padding-left:10px;padding-right:20px;">Cad</h3></span>
 	<span><h1 id="cad" style="font-size:100px;padding:10px;"></h1></span>
   </div>
-      <div id="log" style="background-color:#333; color:#fff; width:300px; height:200px;">
+      <div id="log" style="background-color:#333; color:#fff; width:300px; height:200px;float:left; margin:10px;">
 	<span style="float:left;"><h3
-style="font-size:20px;color:#ccc;padding-left:10px;padding-right:20px;">Speed<br
-/>Rate</h3></span>
+style="font-size:20px;color:#ccc;padding-left:10px;padding-right:20px;">Speed</h3></span>
 	<span><h1 id="speed" style="font-size:100px;padding:10px;"></h1></span>
+  </div>
+          <div id="log" style="background-color:#333; color:#fff; width:300px; height:200px;float:left; margin:10px;">
+	<span style="float:left;"><h3
+style="font-size:20px;color:#ccc;padding-left:10px;padding-right:20px;">watt</h3></span>
+	<span><h1 id="watt" style="font-size:100px;padding:10px;"></h1></span>
   </div>
 </body>
 </html>
