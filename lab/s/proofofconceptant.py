@@ -19,25 +19,25 @@ class HRM(event.EventCallback):
         self._setup_channel()
         self.channel_cs.registerCallback(self)
         print("start listening for cad events")
- 
+
     def stop(self):
         if self.channel_cs:
             self.channel_cs.close()
             self.channel_cs.unassign()
         if self.antnode:
             self.antnode.stop()
- 
+
     def __enter__(self):
         return self
- 
+
     def __exit__(self, type_, value, traceback):
         self.stop()
- 
+
     def _start_antnode(self):
         stick = driver.USB2Driver("")
         self.antnode = node.Node(stick)
         self.antnode.start()
- 
+
     def _setup_channel(self):
         key = node.NetworkKey('N:ANT+', self.netkey)
 	self.antnode.registerEventListener(self)
@@ -53,10 +53,10 @@ class HRM(event.EventCallback):
 
     def process_events(self, msg):
 	print msg
- 
+
     def process(self, msg):
 	#print(msg.payload)
-	#return 
+	#return
 	#if isinstance(msg, message.ChannelEventMessage):
 	#    print(msg.getMessageID())
 	#    print(msg.getMessageCode())
@@ -69,25 +69,25 @@ class HRM(event.EventCallback):
 
             BikeSpeedEventTime = ord(msg.payload[6]) * 256 + ord(msg.payload[5])
             BikeSpeedEventCount = ord(msg.payload[8]) * 256 + ord(msg.payload[7])
-            
-       
+
+
 	    if BikeCadEventCount != self.lastCad["count"]:
                 cad = (60 * (BikeCadEventCount - self.lastCad["count"])*1024) / (BikeCadEventTime - self.lastCad["time"])
 
-		
+
 		self.lastCad["time"] = BikeCadEventTime
 		self.lastCad["count"] = BikeCadEventCount
 		print "bajs"
-                print cad		
+                print cad
 
 
 	    if BikeSpeedEventCount != self.lastSpeed["count"]:
                 speed = (2.096 * (BikeSpeedEventCount - self.lastSpeed["count"])*1024) / (BikeSpeedEventTime - self.lastSpeed["time"])
 
-		
+
 		self.lastSpeed["time"] = BikeSpeedEventTime
 		self.lastSpeed["count"] = BikeSpeedEventCount
-		
+
                 print speed*3.6
 
 
@@ -96,7 +96,7 @@ class HRM(event.EventCallback):
             #print(ord(msg.payload[1]) * 256 + ord(msg.payload[2]), "\n")
 
 NETKEY = 'B9A521FBBD72C345'.decode('hex')
- 
+
 with HRM(netkey=NETKEY) as hrm:
     hrm.start()
     while True:
