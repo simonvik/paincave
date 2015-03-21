@@ -10,33 +10,34 @@
             ws = new WebSocket("ws://localhost:13254/");
 
             ws.onmessage = function(e) {
-                output(e.data);
+                console.log(e.data);
+                msg = JSON.parse(e.data);
+                var hr = document.getElementById("hr_value");
+                var cad = document.getElementById("cad_value");
+                var power = document.getElementById("power_value");
+
+                if(msg.event_type == "hr"){
+                    hr.innerHTML = Math.round(msg.value);
+                }
+
+                if(msg.event_type == "cad"){
+                    cad.innerHTML = Math.round(msg.value);
+                }
+
+                if(msg.event_type == "speed"){
+                    var mph = msg.value * 0.621371;
+                    var slope = 15.05;
+                    var intercept = -45.86666667;
+                    var trwatt = (slope * mph) + intercept;
+                    if(trwatt <= 0) trwatt = 0;
+
+                    power.innerHTML = Math.round(trwatt);
+
+                }
+
             };
         });
 
-
-        function output(str) {
-           /* var hr = document.getElementById("hr");
-            var cad = document.getElementById("cad");
-            var speed = document.getElementById("speed");
-            var watt = document.getElementById("watt");
-            var msg = JSON.parse(str)
-            if(msg.event_type == "hr")
-                hr.innerHTML = Math.round(msg.value);
-            if(msg.event_type == "cad")
-                cad.innerHTML = Math.round(msg.value);
-            if(msg.event_type == "speed"){
-                speed.innerHTML = Math.round(msg.value);
-                var  mph = msg.value * 0.621371;
-                var slope = 15.05;
-                var intercept = -45.86666667;
-                var trwatt = (slope * mph) + intercept;
-                if(trwatt <= 0) trwatt = 0;
-
-                watt.innerHTML = Math.round(trwatt);
-
-            }*/
-        }
 
     </script>
     <style type="text/css">
@@ -108,8 +109,8 @@
                 <div class="header_label">
                     power
                 </div>
-                <div class="infobox_value">
-                    308
+                <div class="infobox_value" id="power_value">
+                    ---
                 </div>
             </div>
             <div class="infobox line_dark">
@@ -145,16 +146,16 @@
                 <div class="header_label">
                     heart<br />rate
                 </div>
-                <div class="infobox_value">
-                    136
+                <div class="infobox_value" id="hr_value">
+                    ---
                 </div>
             </div>
             <div class="infobox line_dark">
                 <div class="header_label">
                     cadence
                 </div>
-                <div class="infobox_value">
-                    98
+                <div class="infobox_value" id="cad_value">
+                    ---
                 </div>
             </div>
         </div>
