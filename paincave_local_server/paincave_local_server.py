@@ -1,16 +1,53 @@
 import sys
 import time
 import struct
+import threading
+from pprint import pprint
+
+from websocket import WebSocketsServer
 from ant.core import driver, node, event, message, log
 from ant.core.constants import CHANNEL_TYPE_TWOWAY_RECEIVE, TIMEOUT_NEVER
 
 
+class WEBSOCKET_ANT_SERVER:
+  def __init__(self):
+    self.port = 13254
+    self.server_thread = None
+    self.server = WebSocketsServer(self.port)
+    self.server.set_fn_new_client(self.client_connect)
+    self.server.set_fn_client_left(self.client_left)
+    self.server.set_fn_message_received(self.message_received)
+
+  def client_connect(self, client, server):
+    pass
+
+  def start(self):
+      self.server_thread = threading.Thread(target=self.server.serve_forever)
+      self.server_thread.daemon = True
+      self.server_thread.start()
+
+  def client_left(self, client, server):
+    pass
+
+  def message_received(self, client, server):
+    pass
+
+  def send_to_all(self, message):
+    self.server.send_message_to_all(message)
+
+  def stop(self):
+    print("Stopping websocket server")
+    self.server.shutdown()
+
+
+
 class ANT_SERVER(event.EventCallback):
-  def __init__(self, netkey, ant_devices):
+  def __init__(self, netkey, ant_devices, was):
     self.ant_devices = ant_devices
     self.channels = []
     self.netkey = netkey
     self.antnode = None
+    self.was = was
     self.ant_modes = {
       "cad_speed" : {
         "device_id" : 121,
@@ -70,7 +107,10 @@ class ANT_SERVER(event.EventCallback):
       self.channels.append(c)
 
   def process(self, msg):
-    print(msg)
+    if isinstance(msg, message.ChannelBroadcastDataMessage):
+      a = "{}".format(ord(msg.payload[-1]))
+      self.was.send_to_all(a)
+
 
   def __exit__(self, type_, value, traceback):
     self.stop()
@@ -79,8 +119,13 @@ class ANT_SERVER(event.EventCallback):
 if __name__ == "__main__":
   NETKEY = 'B9A521FBBD72C345'.decode('hex')
 
-  ant_server = ANT_SERVER(netkey=NETKEY, ant_devices = ["hr"])
+  websocket_ant_server = WEBSOCKET_ANT_SERVER()
+  websocket_ant_server.start()
+
+  ant_server = ANT_SERVER(netkey=NETKEY, ant_devices = ["hr"], was = websocket_ant_server)
   ant_server.start()
+
+
 
   while True:
     try:
@@ -88,6 +133,7 @@ if __name__ == "__main__":
       print("sleeepy")
     except KeyboardInterrupt:
       ant_server.stop()
+      websocket_ant_server.stop()
       sys.exit(0)
 
 
