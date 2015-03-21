@@ -6,8 +6,10 @@ import json
 from pprint import pprint
 
 from websocket import WebSocketsServer
-from ant.core import driver, node, event, message, log
-from ant.core.constants import CHANNEL_TYPE_TWOWAY_RECEIVE, TIMEOUT_NEVER
+
+from ant.easy.node import Node
+from ant.easy.channel import Channel
+from ant.base.message import Message
 
 
 class WEBSOCKET_ANT_SERVER:
@@ -18,6 +20,8 @@ class WEBSOCKET_ANT_SERVER:
     self.server.set_fn_new_client(self.client_connect)
     self.server.set_fn_client_left(self.client_left)
     self.server.set_fn_message_received(self.message_received)
+
+
 
   def client_connect(self, client, server):
     pass
@@ -42,7 +46,7 @@ class WEBSOCKET_ANT_SERVER:
 
 
 
-class ANT_SERVER(event.EventCallback):
+class ANT_SERVER():
   def __init__(self, netkey, ant_devices, was):
     self.ant_devices = ant_devices
     self.channels = []
@@ -66,54 +70,65 @@ class ANT_SERVER(event.EventCallback):
       }
     }
 
+    #Semi temp-values, needs to diff
+    self.lastCad = {"time" : 0, "count" : 0}
+    self.lastSpeed = {"time" : 0, "count" : 0}
+
   def start(self):
-    self._start_antnode()
     self._setup_channels()
 
   def stop(self):
-    for c in self.channels:
-      print("Killing : %s" % c.name)
-      c.close()
-      c.unassign()
-
     self.antnode.stop()
 
-  def _start_antnode(self):
-    stick = driver.USB2Driver("")
-    self.antnode = node.Node(stick)
-    self.antnode.start()
-
-    print("Starting ant-node")
 
   def __enter__(self):
         return self
 
   def _setup_channels(self):
 
-    key = node.NetworkKey('N:ANT+', self.netkey)
-    self.antnode.setNetworkKey(0, key)
-    self.antnode.registerEventListener(self)
+    #node = Node()
+    #node.set_network_key(0x00, NETWORK_KEY)
+
+    #channel = node.new_channel(Channel.Type.BIDIRECTIONAL_RECEIVE)
+
+    #channel.on_broadcast_data = monitor.on_data_heartrate
+    #channel.on_burst_data = monitor.on_data_heartrate
+
+    #channel.set_period(8070)
+    #channel.set_search_timeout(12)
+    #channel.set_rf_freq(57)
+    #channel.set_id(0, 120, 0)
+
+
+
+
+    self.antnode = Node()
+    self.antnode.set_network_key(0x00, self.netkey)
 
     for device in self.ant_devices:
       print("Registering device : %s : %s" % (device, self.ant_modes[device]))
       dev = self.ant_modes[device]
 
-      c = self.antnode.getFreeChannel()
-      c.name = dev["ant_name"]
-      c.assign('N:ANT+', CHANNEL_TYPE_TWOWAY_RECEIVE)
-      c.setID(dev["device_id"], 0, 0)
-      c.setSearchTimeout(TIMEOUT_NEVER)
-      c.setPeriod(dev["period"])
-      c.setFrequency(dev["freq"])
+      c = self.antnode.new_channel(Channel.Type.BIDIRECTIONAL_RECEIVE)
+      c.set_id(0, dev["device_id"], 0)
+      c.set_search_timeout(12)
+      c.set_period(dev["period"])
+      c.set_rf_freq(dev["freq"])
+      m = getattr(self, dev["handler"])
+      c.on_broadcast_data = m
+      c.on_burst_data = m
       c.open()
 
       self.channels.append(c)
+    self.antnode.start()
 
   def process(self, msg):
     if isinstance(msg, message.ChannelBroadcastDataMessage):
+      print msg.getChannelNumber()
       for k,v in self.ant_modes.iteritems():
         if int(v["device_id"]) is int(str(msg.getType()),16):
           m = getattr(self, v["handler"])
+
           if not m:
             print("Handler not implemented :(")
             return None
@@ -122,11 +137,42 @@ class ANT_SERVER(event.EventCallback):
 
 
   def _handle_hr(self, msg):
-    hr = ord(msg.payload[-1])
+    hr = str(msg[-1])
     msg = json.dumps({"event_type" : "hr", "value" : hr})
     print("HR event %s" % msg)
 
     self.was.send_to_all(msg)
+
+  def _handle_cad_speed(self,msg):
+    #Can probably be written more nicely
+
+    #CADENCE
+    BikeCadEventTime = (msg[1]) * 256 + (msg[0])
+    BikeCadEventCount = (msg[3]) * 256 + (msg[2])
+
+    if BikeCadEventCount != self.lastCad["count"]:
+      print("im here")
+      cad = (60 * (BikeCadEventCount - self.lastCad["count"])*1024) / (BikeCadEventTime - self.lastCad["time"])
+      m = json.dumps({"event_type" : "cad", "value" : cad})
+      self.was.send_to_all(m)
+      print("CAD event %s" % m)
+
+    self.lastCad["time"] = BikeCadEventTime
+    self.lastCad["count"] = BikeCadEventCount
+
+
+    #SPEED
+    BikeSpeedEventTime = (msg[5]) * 256 + (msg[4])
+    BikeSpeedEventCount = (msg[7]) * 256 + (msg[6])
+
+    if BikeSpeedEventCount != self.lastSpeed["count"]:
+      speed = (2.096 * (BikeSpeedEventCount - self.lastSpeed["count"])*1024) / (BikeSpeedEventTime - self.lastSpeed["time"])
+      m = json.dumps({"event_type" : "speed", "value" : speed * 3.6})
+      self.was.send_to_all(m)
+      print("Speed event %s" % m)
+
+    self.lastSpeed["time"] = BikeSpeedEventTime
+    self.lastSpeed["count"] = BikeSpeedEventCount
 
 
   def __exit__(self, type_, value, traceback):
@@ -135,11 +181,12 @@ class ANT_SERVER(event.EventCallback):
 
 if __name__ == "__main__":
   NETKEY = 'B9A521FBBD72C345'.decode('hex')
+  NETKEY = [0xb9, 0xa5, 0x21, 0xfb, 0xbd, 0x72, 0xc3, 0x45]
 
   websocket_ant_server = WEBSOCKET_ANT_SERVER()
   websocket_ant_server.start()
 
-  ant_server = ANT_SERVER(netkey=NETKEY, ant_devices = ["hr"], was = websocket_ant_server)
+  ant_server = ANT_SERVER(netkey=NETKEY, ant_devices = ["hr", "cad_speed"], was = websocket_ant_server)
   ant_server.start()
 
   while True:
