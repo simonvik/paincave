@@ -1,0 +1,208 @@
+<html>
+
+<script>
+
+var json =
+{
+    "intervals": [
+        {
+            "duration": "00:05:00",
+            "instructions": [
+                {
+                    "offset": "00:00:00",
+                    "duration": "00:01:00",
+                    "text": "Aaa 1"
+                },
+                {
+                    "offset": "00:00:30",
+                    "duration": "00:02:00",
+                    "text": "Aaa 2"
+                },
+                {
+                    "match": [
+                        {
+                            "cad": ">100"
+                        },
+                        {
+                            "cad": "<50"
+                        }
+                    ],
+                    "text": "n00b"
+                }
+            ],
+            "target_power_start": "60",
+            "target_power_end": "95",
+            "type": "rest"
+        },
+        {
+            "duration": "00:10:00",
+            "instructions": [
+                {
+                    "offset": "00:00:00",
+                    "duration": "00:01:00",
+                    "text": "Aaa 3"
+                },
+                {
+                    "offset": "00:00:30",
+                    "duration": "00:02:00",
+                    "text": "Aaa 4"
+                },
+                {
+                    "match": [
+                        {
+                            "cad": ">100"
+                        },
+                        {
+                            "cad": "<50"
+                        }
+                    ],
+                    "text": "n00b"
+                }
+            ],
+            "target_power_start": "80",
+            "target_power_end": "80",
+            "type": "interval"
+        }
+    ]
+};
+
+
+
+var m_json;
+
+    function init(json_input) {
+        m_json = json_input;
+
+        var t = 0;
+        for (var interval in m_json.intervals) {
+            var o_interval = m_json.intervals[interval];
+            o_interval.t0 = t;
+
+            duration_seconds = hms_to_seconds(o_interval.duration);
+            t += duration_seconds;
+
+            o_interval.t1 = t;
+            console.log(o_interval);
+        }
+    }
+
+    function find_text(at_t, o_interval) {
+        var texts = Array();
+        var t = o_interval.t0;
+        at_t -= t;
+        for (var instruction in o_interval.instructions) {
+            var o_instruction = o_interval.instructions[instruction];
+            console.log(o_instruction);
+
+            if (o_instruction.duration) {
+                var t0 = hms_to_seconds(o_instruction.offset);
+                var t1 = hms_to_seconds(o_instruction.duration) + t0;
+                if (at_t >= t0 && at_t <= t1) {
+                    console.log("pushing " + o_instruction.text);
+                    texts.push(o_instruction.text);
+                }
+            } else {
+                // match not implemented
+            }
+        }
+
+        return texts;
+    }
+
+    function interpolate(o_interval, at_t) {
+//        assert(at_t > t1 && at_t < t0)
+        var t0 = parseInt(o_interval.t0);
+        var t1 = parseInt(o_interval.t1);
+        var p0 = parseInt(o_interval.target_power_start);
+        var p1 = parseInt(o_interval.target_power_end);
+        var t = (at_t - t0) / (t1 - t0);
+        var p = p0 + (t * (p1 - p0));
+
+        return p;
+    }
+
+
+    function get_info_at(at_t, values) {
+        // t = seconds
+        // values = {"cad" : 79, "power" : 98};
+        var t = 0;
+        for (var interval in m_json.intervals) {
+            var o_interval = m_json.intervals[interval];
+
+            if (at_t >= o_interval.t0 && at_t < o_interval.t1) {
+                var target_power = interpolate(o_interval, at_t);
+                var text = find_text(at_t, o_interval);
+                var ret = {"target_power" : target_power,
+                           "text" : text};
+                return ret;
+            }
+
+            t = o_interval.t1;
+        }
+        return ret;
+    }
+
+    function get_line() {
+        // [ [
+        //        [t0(seconds), %ftp],
+        //        [t1(seconds), %ftp]
+        // ], ... ]
+        var ret = Array();
+        for (interval in m_json.intervals) {
+            var o_interval = m_json.intervals[interval];
+            var segment = Array();
+
+            ret.push([
+                [o_interval.t0, o_interval.target_power_start],
+                [o_interval.t1, o_interval.target_power_end]
+            ]);
+        }
+
+        return ret;
+    }
+
+    function hms_to_seconds(str) {
+        var p = str.split(':'),
+            s = 0, m = 1;
+
+        while (p.length > 0) {
+            s += m * parseInt(p.pop(), 10);
+            m *= 60;
+        }
+
+        return parseInt(s);
+    }
+
+///////////////////////////////////
+
+    function test() {
+        init(json);
+        console.log("target_power(0): ");
+        console.log(get_info_at(0));
+
+        console.log("target_power(50): ");
+        console.log(get_info_at(50));
+
+        console.log("target_power(100): ");
+        console.log(get_info_at(100));
+
+        console.log("target_power(00:05:31): ");
+        console.log(get_info_at(hms_to_seconds("00:05:20")));
+
+        /*
+        console.log("target_power(320): ");
+        console.log(get_info_at(320));
+
+        console.log("target_power(6000): ");
+        console.log(get_info_at(6000));
+        */
+
+        console.log("get_line(): ");
+        console.log(get_line());
+    }
+
+test();
+
+</script>
+
+</html>
