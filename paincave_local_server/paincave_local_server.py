@@ -3,6 +3,8 @@ import time
 import struct
 import threading
 import json
+import math
+import random
 
 from websocket import WebSocketsServer
 
@@ -19,8 +21,6 @@ class WEBSOCKET_ANT_SERVER:
     self.server.set_fn_new_client(self.client_connect)
     self.server.set_fn_client_left(self.client_left)
     self.server.set_fn_message_received(self.message_received)
-
-
 
   def client_connect(self, client, server):
     pass
@@ -44,7 +44,6 @@ class WEBSOCKET_ANT_SERVER:
     self.server.shutdown()
 
 
-
 class ANT_SERVER():
   def __init__(self, netkey, ant_devices, was):
     self.ant_devices = ant_devices
@@ -66,8 +65,17 @@ class ANT_SERVER():
         "freq" : 57,
         "ant_name" : "C:HRM",
         "handler" : "_handle_hr"
+      },
+      "power" : {
+        "device_id" : 11,
+        "period" : 8182,
+        "freq" : 57,
+        "ant_name" : "C:PWR",
+        "handler" : "_handle_power"
       }
     }
+
+    self.ant_power_parser = AntPowerParser()
 
     #Semi temp-values, needs to diff
     self.lastCad = {"time" : 0, "count" : -1}
@@ -151,19 +159,94 @@ class ANT_SERVER():
     self.lastSpeed["time"] = BikeSpeedEventTime
     self.lastSpeed["count"] = BikeSpeedEventCount
 
+  def _handle_power(self, msg):
+    #hr = str(msg[-1])
+    #msg = json.dumps({"event_type" : "hr", "value" : hr})
+    power = self.ant_power_parser.on_message(msg[1])
+    m = json.dumps({"event_type" : "power", "value" : power})
+    self.was.send_to_all(m)
+    print("Power event %s" % m)
 
   def __exit__(self, type_, value, traceback):
     self.stop()
 
 
+class AntPowerParser():
+  def __init__(self):
+    self.msg_0x12_count = 0
+    self.msg_0x12_cad = 0
+    self.msg_0x12_prev_time = 0 # 1/2048s
+    self.msg_0x12_prev_torque = 0
+    self.pi_times_128 = 128 * math.pi
+
+  def on_message(self, msg):
+
+    if (msg[0] == 0x12):
+      # Standard Crank Torque Main Data Page (0x12)
+      delta_count = msg[1] - self.msg_0x12_count
+      if (delta_count > 0): # TODO: Handle wrap
+        if (delta_count > 1):
+          print "WRN: delta_count:", delta_count
+        time = msg[5] * 256 + msg[4]
+        torque = msg[7] * 256 + msg[6]
+
+        delta_time = time - self.msg_0x12_prev_time
+        if delta_time < 0:
+          print "INF: time wraps"
+          delta_time += 65536
+
+        delta_torque = torque - self.msg_0x12_prev_torque
+        if delta_torque < 0:
+          print "INF: torque wraps"
+          delta_torque += 65536
+
+        self.msg_0x12_count = msg[1]
+        self.msg_0x12_cad = msg[3]
+        self.msg_0x12_prev_time = time
+        self.msg_0x12_prev_torque = torque
+
+#        angular_vel = 2 * math.pi * delta_count / (delta_time / 2048)
+#        watt = delta_torque * angular_vel / 32
+#        watt = self.pi_times_128 * delta_torque * delta_count / delta_time
+        watt = self.pi_times_128 * delta_torque / delta_time
+
+#        print "Ang vel: ", angular_vel
+#        print "Time:  ", time
+#        print "dTime: ", delta_time
+#        print "Torque: ", delta_torque
+        print "Watt: ",watt
+
+
+
+
+
+
+def test_watt():
+  parser = AntPowerParser()
+  with open("stages_power_50-100watt.txt") as f:
+    lines = f.read().splitlines()
+    for line in lines:
+      buf = line.split(",")
+      out = []
+      for num in buf:
+        out.append(int(num))
+      if random.randint(1, 10) > 0: # add some fun
+        parser.on_message(out)
+  quit()
+
+
+
 if __name__ == "__main__":
+
+  test_watt()
+
   NETKEY = [0xb9, 0xa5, 0x21, 0xfb, 0xbd, 0x72, 0xc3, 0x45]
 
   websocket_ant_server = WEBSOCKET_ANT_SERVER()
   websocket_ant_server.start()
 
   ant_server = ANT_SERVER(netkey=NETKEY, \
-                          ant_devices = ["hr", "cad_speed"], \
+                          ant_devices = ["power"], \
                           was = websocket_ant_server)
   ant_server.start()
 
