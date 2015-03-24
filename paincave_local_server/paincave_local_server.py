@@ -52,12 +52,12 @@ class ANT_SERVER():
     self.antnode = None
     self.was = was
     self.ant_modes = {
-      "cad_speed" : {
+      "speed_cad" : {
         "device_id" : 121,
         "period" : 8086,
         "freq" : 57,
         "ant_name" : "C:CAD",
-        "handler" : "_handle_cad_speed"
+        "handler" : "_handle_speed_cad"
       },
       "hr" : {
         "device_id" : 120,
@@ -75,11 +75,9 @@ class ANT_SERVER():
       }
     }
 
+    self.hr_parser = antparsers.Hr()
     self.power_parser = antparsers.Power()
-
-    #Semi temp-values, needs to diff
-    self.lastCad = {"time" : 0, "count" : -1}
-    self.lastSpeed = {"time" : 0, "count" : -1}
+    self.speed_cadence_parser = antparsers.SpeedCadence()
 
   def start(self):
     self._setup_channels()
@@ -113,61 +111,30 @@ class ANT_SERVER():
 
 
   def _handle_hr(self, msg):
-    hr = str(msg[-1])
-    msg = json.dumps({"event_type" : "hr", "value" : hr})
-    print("HR event %s" % msg)
+    if self.hr_parser.parse(msg):
+      hr = str(self.hr_parser.hr())
+      msg = json.dumps({"event_type" : "hr", "value" : hr})
+      self.was.send_to_all(msg)
+      print("HR event %s" % msg)
 
-    self.was.send_to_all(msg)
-
-  def _handle_cad_speed(self, msg):
-    #Can probably be written more nicely
-
-    #CADENCE
-    BikeCadEventTime = msg[1] * 256 + msg[0]
-    BikeCadEventCount = msg[3] * 256 + msg[2]
-    BikeCadEventTimeDelta = BikeCadEventTime - self.lastCad["time"]
-
-    # ignore redundant, old or invalid data
-    if self.lastCad["count"] >= 0 \
-        and BikeCadEventCount != self.lastCad["count"] \
-        and BikeCadEventTimeDelta > 0 \
-        and BikeCadEventTimeDelta < 6000:
-      cad = (60 * (BikeCadEventCount - self.lastCad["count"]) * 1024) \
-            / BikeCadEventTimeDelta
-      m = json.dumps({"event_type" : "cad", "value" : cad})
+  def _handle_speed_cad(self, msg):
+    if self.speed_cadence_parser.parse(msg):
+      cadence = self.speed_cadence_parser.cadence()
+      m = json.dumps({"event_type" : "cad", "value" : str(cadence)})
       self.was.send_to_all(m)
       print("CAD event %s" % m)
 
-    self.lastCad["time"] = BikeCadEventTime
-    self.lastCad["count"] = BikeCadEventCount
-
-    #SPEED
-    BikeSpeedEventTime = msg[5] * 256 + msg[4]
-    BikeSpeedEventCount = msg[7] * 256 + msg[6]
-    BikeSpeedEventTimeDelta = BikeSpeedEventTime - self.lastSpeed["time"]
-
-    # ignore redundant, old or invalid data
-    if self.lastSpeed["count"] >= 0 \
-        and BikeSpeedEventCount != self.lastSpeed["count"] \
-        and BikeSpeedEventTimeDelta > 0:
-      speed = (2.096 * (BikeSpeedEventCount - self.lastSpeed["count"]) * 1024) \
-              / BikeSpeedEventTimeDelta
-      m = json.dumps({"event_type" : "speed", "value" : speed * 3.6})
+      speed = self.speed_cadence_parser.speed()
+      m = json.dumps({"event_type" : "speed", "value" : str(speed * 3.6)})
       self.was.send_to_all(m)
       print("Speed event %s" % m)
 
-    self.lastSpeed["time"] = BikeSpeedEventTime
-    self.lastSpeed["count"] = BikeSpeedEventCount
-
   def _handle_power(self, msg):
-    print(msg[1])
-    #hr = str(msg[-1])
-    #msg = json.dumps({"event_type" : "hr", "value" : hr})
-    #self.power_parser.parse(msg[1])
-    #power = self.power_parser.value()
-    #m = json.dumps({"event_type" : "power", "value" : power})
-    #self.was.send_to_all(m)
-    #print("Power event %s" % m)
+    if self.power_parser.parse(msg):
+      power = self.power_parser.value()
+      m = json.dumps({"event_type" : "power", "value" : power})
+      self.was.send_to_all(m)
+      print("Power event %s" % m)
 
   def __exit__(self, type_, value, traceback):
     self.stop()
@@ -189,7 +156,7 @@ def test_watt():
 
 if __name__ == "__main__":
 
-  test_watt()
+#  test_watt()
 
   NETKEY = [0xb9, 0xa5, 0x21, 0xfb, 0xbd, 0x72, 0xc3, 0x45]
 
@@ -197,7 +164,7 @@ if __name__ == "__main__":
   websocket_ant_server.start()
 
   ant_server = ANT_SERVER(netkey=NETKEY, \
-                          ant_devices = ["power"], \
+                          ant_devices = [ "power"], \
                           was = websocket_ant_server)
   ant_server.start()
 
