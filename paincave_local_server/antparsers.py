@@ -21,15 +21,36 @@ class Power():
     self._power = 0       # watt
     self._pi_times_128 = 128 * math.pi
 
+    self._0x10_count = 0
+    self._0x10_cad = 0
+
   def power(self):
     return self._power
 
   def parse(self, msg):
-    if msg[0] is 0x12:
+    if msg[0] == 0x10:
+      return self.handle_0x10(msg)
+    if msg[0] == 0x12:
       return self.handle_0x12(msg)
-    if msg[0] is 0x13:
+    if msg[0] == 0x13:
       return self.handle_0x13(msg)
     return False
+
+  def handle_0x10(self, msg):
+    # Standard Power-Only Main Data Page (0x10)
+    delta_count = msg[1] - self._0x10_count
+    if (delta_count > 0): # TODO: Handle wrap
+      if (delta_count > 1):
+        print "WRN: delta_count:", delta_count
+
+      self._0x10_count = msg[1]
+      self._0x10_cad = msg[3]
+      self._0x10_acc_power = msg[5] * 256 + msg[4]
+      self._0x10_current_power = msg[7] * 256 + msg[6]
+
+      print "Accumulated Power: ", self._0x10_acc_power
+      print "Instant Power: ", self._0x10_current_power
+      return True
 
   def handle_0x12(self, msg):
     # Standard Crank Torque Main Data Page (0x12)
