@@ -2,13 +2,13 @@ import math
 
 class Hr():
   def __init__(self):
-    self.hr = 0
+    self._hr = 0
 
   def hr(self):
-    return self.hr
+    return self._hr
 
   def parse(self, msg):
-    self.hr = msg[-1]
+    self._hr = msg[-1]
     return True
 
 

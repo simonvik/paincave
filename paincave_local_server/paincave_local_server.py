@@ -164,7 +164,7 @@ if __name__ == "__main__":
   websocket_ant_server.start()
 
   ant_server = ANT_SERVER(netkey=NETKEY, \
-                          ant_devices = [ "power"], \
+                          ant_devices = ["hr", "speed_cad", "power"], \
                           was = websocket_ant_server)
   ant_server.start()
 
