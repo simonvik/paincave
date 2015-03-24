@@ -8,7 +8,12 @@
             this.player_y = 30;
             var c = document.getElementById("game");
             this.game_canvas_2d = c.getContext("2d");
-            this.assets = {"pixel-city-daytime.png": new Image(), "cat.png": new Image()};
+            this.assets = {
+                "pixel-city-daytime.png": new Image(),
+                "cat.png": new Image(),
+                "pipe_up.png": new Image(),
+                "pipe_down.png": new Image()
+            };
             this.preload_assets(this.assets);
             this.last_render = 0;
 
@@ -28,6 +33,7 @@
             var t = Date.now();
             this.game_canvas_2d.drawImage(this.assets["pixel-city-daytime.png"],0, 0, 800, 600);
             this.game_canvas_2d.drawImage(this.assets["cat.png"],100, this.player_y);
+            this.game_canvas_2d.drawImage(this.assets["pipe_up.png"],100, 300);
 
 
             if( (t - this.last_render) > 10){
