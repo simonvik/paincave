@@ -1,0 +1,80 @@
+<html>
+<head>
+    <script>
+
+
+        var pipicycle = function(){
+            this.map = [];
+            this.player_y = 30;
+            var c = document.getElementById("game");
+            this.game_canvas_2d = c.getContext("2d");
+            this.assets = {"pixel-city-daytime.png": new Image(), "cat.png": new Image()};
+            this.preload_assets(this.assets);
+            this.last_render = 0;
+
+
+        }
+
+        pipicycle.prototype.start = function(){
+            console.log("starting");
+            var that = this;
+            that.main_loop();
+            this.timer = setInterval(function(){that.main_loop()}, 1);
+
+
+        }
+
+        pipicycle.prototype.main_loop = function(){
+            var t = Date.now();
+            this.game_canvas_2d.drawImage(this.assets["pixel-city-daytime.png"],0, 0, 800, 600);
+            this.game_canvas_2d.drawImage(this.assets["cat.png"],100, this.player_y);
+
+
+            if( (t - this.last_render) > 10){
+                console.log("second");
+                this.last_render = Date.now();
+                this.player_y++;
+            }
+
+
+        }
+
+        pipicycle.prototype.preload_assets = function(assets){ //ARRAY
+            console.log("Loading assets");
+            var num = Object.keys(assets).length;
+            console.log(num + " of assets to load");
+
+            that = this;
+            for (var image in assets){
+                console.log("loading" + image);
+                var img = assets[image];
+
+                img.src = image;
+                img.onload = function(){
+                    --num;
+                    if(num === 0){
+                         that.start();
+                    }
+                }
+            }
+        }
+
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var game = new pipicycle();
+        });
+
+
+    </script>
+
+    <style>
+        canvas {
+             border: 1px solid #000;
+        }
+    </style>
+</head>
+<body>
+    <canvas width="800" height="600" id="game"></canvas>
+
+</body>
+</html>
