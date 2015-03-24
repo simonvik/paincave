@@ -3,7 +3,6 @@ import time
 import struct
 import threading
 import json
-import math
 import random
 
 from websocket import WebSocketsServer
@@ -12,6 +11,7 @@ from ant.easy.node import Node
 from ant.easy.channel import Channel
 from ant.base.message import Message
 
+import antparsers
 
 class WEBSOCKET_ANT_SERVER:
   def __init__(self):
@@ -75,7 +75,7 @@ class ANT_SERVER():
       }
     }
 
-    self.ant_power_parser = AntPowerParser()
+    self.power_parser = antparsers.Power()
 
     #Semi temp-values, needs to diff
     self.lastCad = {"time" : 0, "count" : -1}
@@ -160,69 +160,21 @@ class ANT_SERVER():
     self.lastSpeed["count"] = BikeSpeedEventCount
 
   def _handle_power(self, msg):
+    print(msg[1])
     #hr = str(msg[-1])
     #msg = json.dumps({"event_type" : "hr", "value" : hr})
-    power = self.ant_power_parser.on_message(msg[1])
-    m = json.dumps({"event_type" : "power", "value" : power})
-    self.was.send_to_all(m)
-    print("Power event %s" % m)
+    #self.power_parser.parse(msg[1])
+    #power = self.power_parser.value()
+    #m = json.dumps({"event_type" : "power", "value" : power})
+    #self.was.send_to_all(m)
+    #print("Power event %s" % m)
 
   def __exit__(self, type_, value, traceback):
     self.stop()
 
 
-class AntPowerParser():
-  def __init__(self):
-    self.msg_0x12_count = 0
-    self.msg_0x12_cad = 0
-    self.msg_0x12_prev_time = 0 # 1/2048s
-    self.msg_0x12_prev_torque = 0
-    self.pi_times_128 = 128 * math.pi
-
-  def on_message(self, msg):
-
-    if (msg[0] == 0x12):
-      # Standard Crank Torque Main Data Page (0x12)
-      delta_count = msg[1] - self.msg_0x12_count
-      if (delta_count > 0): # TODO: Handle wrap
-        if (delta_count > 1):
-          print "WRN: delta_count:", delta_count
-        time = msg[5] * 256 + msg[4]
-        torque = msg[7] * 256 + msg[6]
-
-        delta_time = time - self.msg_0x12_prev_time
-        if delta_time < 0:
-          print "INF: time wraps"
-          delta_time += 65536
-
-        delta_torque = torque - self.msg_0x12_prev_torque
-        if delta_torque < 0:
-          print "INF: torque wraps"
-          delta_torque += 65536
-
-        self.msg_0x12_count = msg[1]
-        self.msg_0x12_cad = msg[3]
-        self.msg_0x12_prev_time = time
-        self.msg_0x12_prev_torque = torque
-
-#        angular_vel = 2 * math.pi * delta_count / (delta_time / 2048)
-#        watt = delta_torque * angular_vel / 32
-#        watt = self.pi_times_128 * delta_torque * delta_count / delta_time
-        watt = self.pi_times_128 * delta_torque / delta_time
-
-#        print "Ang vel: ", angular_vel
-#        print "Time:  ", time
-#        print "dTime: ", delta_time
-#        print "Torque: ", delta_torque
-        print "Watt: ",watt
-
-
-
-
-
-
 def test_watt():
-  parser = AntPowerParser()
+  parser = antparsers.Power()
   with open("stages_power_50-100watt.txt") as f:
     lines = f.read().splitlines()
     for line in lines:
@@ -231,9 +183,8 @@ def test_watt():
       for num in buf:
         out.append(int(num))
       if random.randint(1, 10) > 0: # add some fun
-        parser.on_message(out)
+        parser.parse(out)
   quit()
-
 
 
 if __name__ == "__main__":
