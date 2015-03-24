@@ -21,7 +21,7 @@ class Power():
     self._power = 0       # watt
     self._pi_times_128 = 128 * math.pi
 
-  def power():
+  def power(self):
     return self._power
 
   def parse(self, msg):
@@ -59,13 +59,14 @@ class Power():
       # angular_vel = 2 * math.pi * delta_count / (delta_time / 2048)
       # power = delta_torque * angular_vel / 32
       # power = self.pi_times_128 * delta_torque * delta_count / delta_time
-      power = self._pi_times_128 * delta_torque / delta_time
+      self._power = self._pi_times_128 * delta_torque / delta_time
 
       # print "Ang vel: ", angular_vel
       # print "Time:  ", time
       # print "dTime: ", delta_time
       # print "Torque: ", delta_torque
-      print "Power: ", power, " W"
+      print "Power: ", self._power, " W"
+      return True
 
   def handle_0x13(self, msg):
     pass

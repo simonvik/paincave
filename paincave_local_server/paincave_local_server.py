@@ -131,7 +131,7 @@ class ANT_SERVER():
 
   def _handle_power(self, msg):
     if self.power_parser.parse(msg):
-      power = self.power_parser.value()
+      power = self.power_parser.power()
       m = json.dumps({"event_type" : "power", "value" : power})
       self.was.send_to_all(m)
       print("Power event %s" % m)
