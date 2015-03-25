@@ -79,7 +79,13 @@ class ANT_SERVER():
     self.hr_parser = antparsers.Hr()
     self.power_parser = antparsers.Power()
     self.speed_cadence_parser = antparsers.SpeedCadence()
-    self.log_raw_data = True
+    self.parsers = {
+      "hr" : self.hr_parser,
+      "power" : self.power_parser,
+      "speed_cad" : self.speed_cadence_parser
+    }
+    self._log_raw_data = False
+    self._log_decoded = True
 
   def start(self):
     self._setup_channels()
@@ -112,7 +118,7 @@ class ANT_SERVER():
     self.antnode.start()
 
   def _log_raw(self, event_type, msg):
-    if self.log_raw_data:
+    if self._log_raw_data:
       data = []
       for m in msg:
         data.append(m)
@@ -122,61 +128,71 @@ class ANT_SERVER():
                       "data" : data})
       print >> sys.stderr, m
 
-  def _handle_hr(self, msg):
-    self._log_raw("hr", msg)
-    if self.hr_parser.parse(msg):
-      hr = str(self.hr_parser.hr())
-      msg = json.dumps({"event_type" : "hr", "value" : hr})
-      self.was.send_to_all(msg)
-      print("HR event %s" % msg)
+  def _parse_and_send(self, event_type, data):
+    parser = self.parsers[event_type]
+    if parser.parse(data):
+      for message in parser.json_messages():
+        self.was.send_to_all(message)
+        if self._log_decoded:
+          print message
+
+  def _handle_hr(self, data):
+    self._log_raw("hr", data)
+    self._parse_and_send("hr", data)
 
   def _handle_speed_cad(self, msg):
     self._log_raw("speed_cad", msg)
-    if self.speed_cadence_parser.parse(msg):
-      cadence = self.speed_cadence_parser.cadence()
-      m = json.dumps({"event_type" : "cad", "value" : str(cadence)})
-      self.was.send_to_all(m)
-      print("CAD event %s" % m)
-
-      speed = self.speed_cadence_parser.speed()
-      m = json.dumps({"event_type" : "speed", "value" : str(speed * 3.6)})
-      self.was.send_to_all(m)
-      print("Speed event %s" % m)
+    self._parse_and_send("speed_cad", data)
 
   def _handle_power(self, msg):
     self._log_raw("power", msg)
-    if self.power_parser.parse(msg):
-      power = self.power_parser.power()
-      m = json.dumps({"event_type" : "power", "value" : power})
-      self.was.send_to_all(m)
-      print("Power event %s" % m)
+    self._parse_and_send("power", data)
 
   def __exit__(self, type_, value, traceback):
     self.stop()
 
 
-def test_watt():
-  parser = antparsers.Power()
-  with open("stages_power_50-100watt.txt") as f:
-    lines = f.read().splitlines()
+class LogReplayer():
+  def __init__(self, logfile, was):
+    self.logfile = logfile
+    self.was = was
+    self.hr_parser = antparsers.Hr()
+    self.power_parser = antparsers.Power()
+    self.speed_cadence_parser = antparsers.SpeedCadence()
+    self.parsers = {
+      "hr" : self.hr_parser,
+      "power" : self.power_parser,
+      "speed_cad" : self.speed_cadence_parser
+    }
+
+  def run(self):
+    with open(self.logfile) as f:
+      lines = f.read().splitlines()
     for line in lines:
-      buf = line.split(",")
-      out = []
-      for num in buf:
-        out.append(int(num))
-      if random.randint(1, 10) > 0: # add some fun
-        parser.parse(out)
-  quit()
+      time.sleep(0.1) # TODO: Replay in realtime or factor of time
+      line_j = json.loads(line)
+      parser = self.parsers[line_j["event_type"]]
+      if parser.parse(line_j["data"]):
+        for message in parser.json_messages():
+          print "Message! %s" % message
+          self.was.send_to_all(message)
 
 
 if __name__ == "__main__":
 
-#  test_watt()
+  raw_log = False
+  raw_log = "20150325_hr-speed_cad-power.txt" # Uncomment to replay logfile
+
 
   NETKEY = [0xb9, 0xa5, 0x21, 0xfb, 0xbd, 0x72, 0xc3, 0x45]
 
   websocket_ant_server = WEBSOCKET_ANT_SERVER()
   websocket_ant_server.start()
+
+  if raw_log:
+    log_replayer = LogReplayer(raw_log, websocket_ant_server)
+    log_replayer.run()
+    quit()
 
   ant_server = ANT_SERVER(netkey=NETKEY, \
                           ant_devices = ["hr", "speed_cad", "power"], \
@@ -190,6 +206,3 @@ if __name__ == "__main__":
       ant_server.stop()
       websocket_ant_server.stop()
       sys.exit(0)
-
-
-
