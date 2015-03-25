@@ -11,10 +11,8 @@ class Hr():
   def hr(self):
     return self._hr
 
-  def json_messages(self):
-    hr = str(self._hr)
-    msg = json.dumps({"event_type" : "hr", "value" : hr})
-    return [msg]
+  def values(self):
+    return [{"event_type" : "hr", "value" : self._hr}]
 
   def parse(self, msg):
     self._hr = msg[-1]
@@ -36,13 +34,17 @@ class Power():
   def power(self):
     return self._power
 
-  def json_messages(self):
-    msg_power = json.dumps({"event_type" : "power", \
-                            "value" : str(self._power)})
-    msg_cadence = json.dumps({"event_type" : "cad", \
-                              "value" : str(self._cad), \
-                              "source" : "power"})
-    return [msg_power, msg_cadence]
+  def values(self):
+    return \
+    [
+      {"event_type" : "power",
+       "value" : str(self._power)
+      },
+      {"event_type" : "cad",
+       "value" : str(self._cad),
+       "source" : "power"
+      }
+    ]
 
   def parse(self, msg):
     if msg[0] == 0x10:
@@ -123,13 +125,17 @@ class SpeedCadence():
   def cadence(self):
     return self._cadence
 
-  def json_messages(self):
-    msg_speed = json.dumps({"event_type" : \
-                            "speed", "value" : str(self._speed * 3.6)})
-    msg_cadence = json.dumps({"event_type" : "cad", \
-                              "value" : str(self._cadence), \
-                              "source" : "speed_cad"})
-    return [msg_speed, msg_cadence]
+  def values(self):
+    return \
+    [
+      {"event_type" : "speed",
+       "value" : str(self._speed * 3.6)
+      },
+      {"event_type" : "cad",
+       "value" : str(self._cadence),
+       "source" : "speed_cad"
+      }
+    ]
 
   def parse(self, msg):
     parsed_cadence = self.parse_cadence(msg)

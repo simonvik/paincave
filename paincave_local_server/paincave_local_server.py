@@ -119,20 +119,21 @@ class ANT_SERVER():
       data = []
       for m in msg:
         data.append(m)
-      m = json.dumps({"raw" : "true", \
-                      "event_type" : event_type, \
-                      "time_millis" : int(time.time() * 1000), \
+      m = json.dumps({"raw" : "true",
+                      "event_type" : event_type,
+                      "time_millis" : int(time.time() * 1000),
                       "data" : data})
       print >> sys.stderr, m
 
   def _parse_and_send(self, event_type, data):
     self._log_raw(event_type, data)
+
     parser = self.parsers[event_type]
     if parser.parse(data):
-      for message in parser.json_messages():
-        self.was.send_to_all(message)
+      for value in parser.values():
+        self.was.send_to_all(json.dumps(value))
         if self._log_decoded:
-          print message
+          print value
 
   def _handle_hr(self, data):
     self._parse_and_send("hr", data)
@@ -165,9 +166,9 @@ class LogReplayer():
       line_j = json.loads(line)
       parser = self.parsers[line_j["event_type"]]
       if parser.parse(line_j["data"]):
-        for message in parser.json_messages():
-          print "Message! %s" % message
-          self.was.send_to_all(message)
+        for value in parser.values():
+          print "Decoded value: %s" % value
+          self.was.send_to_all(json.dumps(value))
 
 
 if __name__ == "__main__":
