@@ -4,6 +4,7 @@ import struct
 import threading
 import json
 import random
+import time
 
 from websocket import WebSocketsServer
 
@@ -78,6 +79,7 @@ class ANT_SERVER():
     self.hr_parser = antparsers.Hr()
     self.power_parser = antparsers.Power()
     self.speed_cadence_parser = antparsers.SpeedCadence()
+    self.log_raw_data = True
 
   def start(self):
     self._setup_channels()
@@ -109,8 +111,19 @@ class ANT_SERVER():
 
     self.antnode.start()
 
+  def _log_raw(self, event_type, msg):
+    if self.log_raw_data:
+      data = []
+      for m in msg:
+        data.append(m)
+      m = json.dumps({"raw" : "true", \
+                      "event_type" : event_type, \
+                      "time_millis" : int(time.time() * 1000), \
+                      "data" : data})
+      print >> sys.stderr, m
 
   def _handle_hr(self, msg):
+    self._log_raw("hr", msg)
     if self.hr_parser.parse(msg):
       hr = str(self.hr_parser.hr())
       msg = json.dumps({"event_type" : "hr", "value" : hr})
@@ -118,6 +131,7 @@ class ANT_SERVER():
       print("HR event %s" % msg)
 
   def _handle_speed_cad(self, msg):
+    self._log_raw("speed_cad", msg)
     if self.speed_cadence_parser.parse(msg):
       cadence = self.speed_cadence_parser.cadence()
       m = json.dumps({"event_type" : "cad", "value" : str(cadence)})
@@ -130,6 +144,7 @@ class ANT_SERVER():
       print("Speed event %s" % m)
 
   def _handle_power(self, msg):
+    self._log_raw("power", msg)
     if self.power_parser.parse(msg):
       power = self.power_parser.power()
       m = json.dumps({"event_type" : "power", "value" : power})
