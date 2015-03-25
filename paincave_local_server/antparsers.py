@@ -1,6 +1,9 @@
 import math
 import json
 
+def _byte_wrap_delta(x, y):
+  return x - y + 256 if x - y < -127 else x - y
+
 class Hr():
   def __init__(self):
     self._hr = 0
@@ -52,8 +55,8 @@ class Power():
 
   def handle_0x10(self, msg):
     # Standard Power-Only Main Data Page (0x10)
-    delta_count = msg[1] - self._0x10_count
-    if (delta_count > 0): # TODO: Handle wrap
+    delta_count = _byte_wrap_delta(msg[1], self._0x10_count)
+    if (delta_count > 0):
       if (delta_count > 1):
         print "WRN: delta_count:", delta_count
 
@@ -68,8 +71,8 @@ class Power():
 
   def handle_0x12(self, msg):
     # Standard Crank Torque Main Data Page (0x12)
-    delta_count = msg[1] - self._count
-    if (delta_count > 0): # TODO: Handle wrap
+    delta_count = _byte_wrap_delta(msg[1], self._count)
+    if (delta_count > 0):
       if (delta_count > 1):
         print "WRN: delta_count:", delta_count
 
