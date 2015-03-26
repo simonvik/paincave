@@ -7,10 +7,15 @@ import random
 import time
 
 from websocket import WebSocketsServer
+import argparse
 
-from ant.easy.node import Node
-from ant.easy.channel import Channel
-from ant.base.message import Message
+try:
+  from ant.easy.node import Node
+  from ant.easy.channel import Channel
+  from ant.base.message import Message
+except ImportError as e: 
+  print ("Failed to load ant libs : \n%s" % e)
+  print ("Download ant-lib from https://github.com/simonvik/openant")
 
 import antparsers
 
@@ -173,8 +178,13 @@ class LogReplayer():
 
 if __name__ == "__main__":
 
-  raw_log = False
-  raw_log = "20150325_hr-speed_cad-power.txt" # Uncomment to replay logfile
+  parser = argparse.ArgumentParser(description='Stuffs')
+  parser.add_argument('--filename')
+  args = parser.parse_args()
+
+  if args.filename:
+    raw_log = args.filename
+
 
   NETKEY = [0xb9, 0xa5, 0x21, 0xfb, 0xbd, 0x72, 0xc3, 0x45]
 
