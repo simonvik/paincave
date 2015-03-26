@@ -21,7 +21,6 @@ class Hr():
 
 class Power():
   def __init__(self):
-    self._count = 0
     self._cad = 0         # [0-255] rpm
     self._prev_time = 0   # 1/2048 s
     self._prev_torque = 0 # 1/32 Nm
@@ -30,6 +29,11 @@ class Power():
 
     self._0x10_count = 0
     self._0x10_cad = 0
+
+    self._0x12_count = 0
+
+    self._0x13_count = 0
+
 
     self._0x52_battery_status_names = {
       0x00 : "invalid",
@@ -88,7 +92,7 @@ class Power():
 
   def handle_0x12(self, msg):
     # Standard Crank Torque Main Data Page (0x12)
-    delta_count = _byte_wrap_delta(msg[1], self._count)
+    delta_count = _byte_wrap_delta(msg[1], self._0x12_count)
     if (delta_count > 0):
       if (delta_count > 1):
         print "WRN: delta_count:", delta_count
@@ -106,7 +110,7 @@ class Power():
         print "INF: torque wraps"
         delta_torque += 65536
 
-      self._count = msg[1]
+      self._0x12_count = msg[1]
       self._cad = msg[3]
       self._prev_time = time
       self._prev_torque = torque
@@ -124,7 +128,20 @@ class Power():
       return True
 
   def handle_0x13(self, msg):
-    pass
+    # Torque Effectiveness and Pedal Smoothness Main Data Page (0x13)
+    delta_count = _byte_wrap_delta(msg[1], self._0x13_count)
+    if (delta_count <= 0):
+      return False
+    self._0x13_count = msg[1]
+
+    left_torque_effectiveness = msg[2] / 2.0 if msg[2] != 0xFF else msg[2]
+    right_torque_effectiveness = msg[3] / 2.0 if msg[3] != 0xFF else msg[3]
+    left_smoothness = msg[4] / 2.0 if msg[4] != 0xFF else msg[4]
+    right_smoothness = msg[5] / 2.0 if msg[5] != 0xFF else msg[5]
+
+    print "Torque effectiveness: ", left_torque_effectiveness, "/", right_torque_effectiveness
+    print "Smoothness: ", left_smoothness, "/", right_smoothness
+
 
   def handle_0x50(self, msg):
     # Common Data Page 80: Manufacturer's Information
