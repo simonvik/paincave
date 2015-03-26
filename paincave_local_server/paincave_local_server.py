@@ -13,7 +13,7 @@ try:
   from ant.easy.node import Node
   from ant.easy.channel import Channel
   from ant.base.message import Message
-except ImportError as e: 
+except ImportError as e:
   print ("Failed to load ant libs : \n%s" % e)
   print ("Download ant-lib from https://github.com/simonvik/openant")
 
@@ -191,8 +191,8 @@ if __name__ == "__main__":
   websocket_ant_server = WEBSOCKET_ANT_SERVER()
   websocket_ant_server.start()
 
-  if raw_log:
-    log_replayer = LogReplayer(raw_log, websocket_ant_server)
+  if args.filename:
+    log_replayer = LogReplayer(args.filename, websocket_ant_server)
     log_replayer.run()
     quit()
 
