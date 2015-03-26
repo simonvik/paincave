@@ -182,10 +182,6 @@ if __name__ == "__main__":
   parser.add_argument('--filename')
   args = parser.parse_args()
 
-  if args.filename:
-    raw_log = args.filename
-
-
   NETKEY = [0xb9, 0xa5, 0x21, 0xfb, 0xbd, 0x72, 0xc3, 0x45]
 
   websocket_ant_server = WEBSOCKET_ANT_SERVER()
