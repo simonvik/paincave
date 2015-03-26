@@ -154,8 +154,9 @@ class ANT_SERVER():
 
 
 class LogReplayer():
-  def __init__(self, logfile, was):
+  def __init__(self, logfile, speed, was):
     self.logfile = logfile
+    self.speed = speed
     self.was = was
     self.parsers = {
       "hr" : antparsers.Hr(),
@@ -178,8 +179,11 @@ class LogReplayer():
 
 if __name__ == "__main__":
 
-  parser = argparse.ArgumentParser(description='Stuffs')
-  parser.add_argument('--filename')
+  parser = argparse.ArgumentParser(description='Paincave server')
+  parser.add_argument('-l', '--replay-log', metavar='logfile', help='Replays a log file')
+  parser.add_argument('--replay-speed', metavar='speed', default=1.0, type=float, help='Replay speed factor')
+  parser.add_argument('-v', action='store_true', default=False, help='Verbose, prints parsed data')
+  parser.add_argument('--enable-log', action='store_true', default=False, help='Logs raw data')
   args = parser.parse_args()
 
   NETKEY = [0xb9, 0xa5, 0x21, 0xfb, 0xbd, 0x72, 0xc3, 0x45]
@@ -187,14 +191,16 @@ if __name__ == "__main__":
   websocket_ant_server = WEBSOCKET_ANT_SERVER()
   websocket_ant_server.start()
 
-  if args.filename:
-    log_replayer = LogReplayer(args.filename, websocket_ant_server)
+  if args.replay_log:
+    log_replayer = LogReplayer(args.replay_log, args.replay_speed, websocket_ant_server)
     log_replayer.run()
     quit()
 
   ant_server = ANT_SERVER(netkey=NETKEY, \
                           ant_devices = ["hr", "speed_cad", "power"], \
                           was = websocket_ant_server)
+  ant_server._log_decoded = args.v
+  ant_server._log_raw_data = args.enable_log #TODO: write to ./logs/YYYYMMDD-HHMM.txt
   ant_server.start()
 
   while True:
