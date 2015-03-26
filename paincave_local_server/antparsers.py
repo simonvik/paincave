@@ -31,6 +31,24 @@ class Power():
     self._0x10_count = 0
     self._0x10_cad = 0
 
+    self._0x52_battery_status_names = {
+      0x00 : "invalid",
+      0x01 : "new",
+      0x02 : "good",
+      0x03 : "ok",
+      0x04 : "low",
+      0x05 : "critical",
+      0x06 : "invalid",
+      0x07 : "invalid"}
+
+    self._message_handlers = {
+      0x10 : self.handle_0x10,
+      0x12 : self.handle_0x12,
+      0x13 : self.handle_0x13,
+      0x50 : self.handle_0x50,
+      0x51 : self.handle_0x51,
+      0x52 : self.handle_0x52}
+
   def power(self):
     return self._power
 
@@ -47,12 +65,9 @@ class Power():
     ]
 
   def parse(self, msg):
-    if msg[0] == 0x10:
-      return self.handle_0x10(msg)
-    if msg[0] == 0x12:
-      return self.handle_0x12(msg)
-    if msg[0] == 0x13:
-      return self.handle_0x13(msg)
+    data_page = msg[0]
+    if data_page in self._message_handlers:
+      return self._message_handlers[data_page](msg)
     return False
 
   def handle_0x10(self, msg):
@@ -110,6 +125,38 @@ class Power():
 
   def handle_0x13(self, msg):
     pass
+
+  def handle_0x50(self, msg):
+    # Common Data Page 80: Manufacturer's Information
+    print msg
+    hw_revision = msg[3]
+    print "HW revision: ", hw_revision
+
+    manufacturer_id = msg[4] | (msg[5] << 8)
+    print "Manufacturer id: ", manufacturer_id
+
+    model_number = msg[6] | (msg[7] << 8)
+    print "Model number: ", model_number
+
+  def handle_0x51(self, msg):
+    # Common Page 81 (0x51) - Product Information
+    sw_rev = msg[3] / 10.0 + (msg[2] / 1000.0 if msg[2] != 0xFF else 0)
+    print "SW revision: ", sw_rev
+
+    serial_number = msg[4] | (msg[5] << 8) | (msg[6] << 16) | (msg[7] << 24)
+    print "Serial number: ", serial_number
+
+  def handle_0x52(self, msg):
+    # Common Page 82 (0x52): Battery Status
+    battery_voltage = (msg[7] & 0x0F) + msg[6] / 256.0
+    print "Battery voltage: ", battery_voltage
+
+    battery_status = (msg[7] & 0x7F) >> 4
+    print "Battery status: ", self._0x52_battery_status_names[battery_status]
+
+    resolution = 2 if msg[7] & 128 == 128 else 6
+    self._0x52_battery_operating_time = (msg[3] + msg[4] * 256 + msg[5] * 65536) / resolution
+    print "Operating time (hours): ", (self._0x52_battery_operating_time / 3600.0)
 
 
 class SpeedCadence():
