@@ -43,6 +43,15 @@
             this.timer = setInterval(function(){that.main_loop()}, 1);
         }
 
+	pipicycle.prototype.check_collision = function(){
+	    var that = this;
+	    
+
+            this.map.forEach(function(arr){
+                
+            }
+	}
+
         pipicycle.prototype.render_map = function(){
             that = this;
             this.map.forEach(function(arr){
@@ -63,7 +72,6 @@
             if(!this.running){
                 this.game_canvas_2d.font = "48px serif";
                 var text = this.game_canvas_2d.measureText("Paused, press p");
-
                 this.game_canvas_2d.fillText("Paused, press p", 800/2-(text.width/2) ,300);
             }
 
@@ -72,6 +80,7 @@
                 this.player_y++;
                 this.player_x++;
 
+		this.check_collision();
 
             }
 
