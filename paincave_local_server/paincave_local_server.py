@@ -36,7 +36,6 @@ class WEBSOCKET_ANT_SERVER:
 
   def start(self):
     self.server_thread = threading.Thread(target=self.server.serve_forever)
-    self.server_thread.daemon = True
     self.server_thread.start()
 
   def client_left(self, client, server):
@@ -51,6 +50,7 @@ class WEBSOCKET_ANT_SERVER:
   def stop(self):
     print("Stopping websocket server")
     self.server.shutdown()
+    self.server.killall()
 
 
 class ANT_SERVER():
@@ -221,15 +221,14 @@ if __name__ == "__main__":
                               was = websocket_ant_server)
       ant_server._log_decoded = args.v
       ant_server._log_raw_data = args.enable_log #TODO: write to ./logs/YYYYMMDD-HHMM.txt
-      ant_server.start()
+      try:
+        ant_server.start()
+      except KeyboardInterrupt:
+        ant_server.stop()
       break
     except AntException:
       print "ERR: Failed to setup ant server. Retrying... %d", i
 
-  while True:
-    try:
-      time.sleep(1)
-    except KeyboardInterrupt:
-      ant_server.stop()
-      websocket_ant_server.stop()
-      sys.exit(0)
+
+  print "Killing websocket"
+  websocket_ant_server.stop()

@@ -112,19 +112,23 @@ class WebSocketsServer(ThreadingMixIn, TCPServer, API):
 		self.client_left(client, self)
 		if client in self.clients:
 			self.clients.remove(client)
-	
+
 	def _unicast_(self, to_client, msg):
 		to_client['handler'].send_message(msg)
 
 	def _multicast_(self, msg):
 		for client in self.clients:
 			self._unicast_(client, msg)
-		
+
 	def handler_to_client(self, handler):
 		for client in self.clients:
 			if client['handler'] == handler:
 				return client
 
+	def killall(self):
+		for client in self.clients:
+			client["handler"].keep_alive = 0
+			client["handler"].send_message("Bye")
 
 
 class WebSocketHandler(StreamRequestHandler):
@@ -197,7 +201,7 @@ class WebSocketHandler(StreamRequestHandler):
 		Fragmented(=continuation) messages are not being used since their usage
 		is needed in very limited cases - when we don't know the payload length.
 		'''
-	
+
 		# Validate message
 		if isinstance(message, bytes):
 			message = try_decode_UTF8(message) # this is slower but assures we have UTF-8
@@ -230,7 +234,7 @@ class WebSocketHandler(StreamRequestHandler):
 			header.append(FIN | OPCODE_TEXT)
 			header.append(PAYLOAD_LEN_EXT64)
 			header.extend(struct.pack(">Q", payload_length))
-			
+
 		else:
 			raise Exception("Message is too big. Consider breaking it into chunks.")
 			return
@@ -254,7 +258,7 @@ class WebSocketHandler(StreamRequestHandler):
 		self.handshake_done = self.request.send(response.encode())
 		self.valid_client = True
 		self.server._new_client_(self)
-		
+
 	def make_handshake_response(self, key):
 		return \
 		  'HTTP/1.1 101 Switching Protocols\r\n'\
@@ -262,7 +266,7 @@ class WebSocketHandler(StreamRequestHandler):
 		  'Connection: Upgrade\r\n'             \
 		  'Sec-WebSocket-Accept: %s\r\n'        \
 		  '\r\n' % self.calculate_response_key(key)
-		
+
 	def calculate_response_key(self, key):
 		GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'
 		hash = sha1(key.encode() + GUID.encode())
@@ -293,7 +297,7 @@ def try_decode_UTF8(data):
 		return False
 	except Exception as e:
 		raise(e)
-		
+
 
 
 # This is only for testing purposes
