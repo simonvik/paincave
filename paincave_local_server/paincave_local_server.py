@@ -143,10 +143,10 @@ class ANT_SERVER():
   def _handle_hr(self, data):
     self._parse_and_send("hr", data)
 
-  def _handle_speed_cad(self, msg):
+  def _handle_speed_cad(self, data):
     self._parse_and_send("speed_cad", data)
 
-  def _handle_power(self, msg):
+  def _handle_power(self, data):
     self._parse_and_send("power", data)
 
   def __exit__(self, type_, value, traceback):
