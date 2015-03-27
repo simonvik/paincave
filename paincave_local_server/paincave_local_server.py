@@ -5,7 +5,9 @@ import threading
 import json
 import random
 import time
+import os.path
 
+from datetime import datetime
 from websocket import WebSocketsServer
 import argparse
 
@@ -91,6 +93,11 @@ class ANT_SERVER():
     self._log_decoded = True
 
   def start(self):
+    if not os.path.isdir("logs"):
+      os.mkdir("logs")
+    self.logfile = datetime.strftime(datetime.now(), "logs/%Y%m%d_%H%M.txt")
+    self.logfile_handle = open(self.logfile, "w")
+
     self._setup_channels()
 
   def stop(self):
@@ -129,7 +136,10 @@ class ANT_SERVER():
                       "event_type" : event_type,
                       "time_millis" : int(time.time() * 1000),
                       "data" : data})
-      print >> sys.stderr, m
+      self.logfile_handle.write(m)
+      self.logfile_handle.write("\n")
+      self.logfile_handle.flush()
+      os.fsync(self.logfile_handle.fileno())
 
   def _parse_and_send(self, event_type, data):
     self._log_raw(event_type, data)
@@ -152,6 +162,7 @@ class ANT_SERVER():
 
   def __exit__(self, type_, value, traceback):
     self.stop()
+    self.logfile_handle.close()
 
 
 class LogReplayer():
@@ -190,7 +201,7 @@ if __name__ == "__main__":
   parser.add_argument('-l', '--replay-log', metavar='logfile', help='Replays a log file')
   parser.add_argument('--replay-speed', metavar='speed', default=1.0, type=float, help='Replay speed factor')
   parser.add_argument('-v', action='store_true', default=False, help='Verbose, prints parsed data')
-  parser.add_argument('--enable-log', action='store_true', default=False, help='Logs raw data')
+  parser.add_argument('--enable-log', action='store_true', default=True, help='Logs raw data')
   args = parser.parse_args()
 
   NETKEY = [0xb9, 0xa5, 0x21, 0xfb, 0xbd, 0x72, 0xc3, 0x45]
@@ -213,7 +224,7 @@ if __name__ == "__main__":
       ant_server.start()
       break
     except AntException:
-      print "ERR: Failed to setup ant server. Retrying...", i
+      print "ERR: Failed to setup ant server. Retrying... %d", i
 
   while True:
     try:
