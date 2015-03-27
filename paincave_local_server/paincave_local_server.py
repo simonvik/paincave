@@ -13,6 +13,7 @@ try:
   from ant.easy.node import Node
   from ant.easy.channel import Channel
   from ant.base.message import Message
+  from ant.easy.exception import AntException
 except ImportError as e:
   print ("Failed to load ant libs : \n%s" % e)
   print ("Download ant-lib from https://github.com/simonvik/openant")
@@ -168,12 +169,14 @@ class LogReplayer():
     with open(self.logfile) as f:
       lines = f.read().splitlines()
     t = json.loads(lines[0])["time_millis"]
+
     for line in lines:
       line_j = json.loads(line)
       delta_t = line_j["time_millis"] - t
       t = line_j["time_millis"]
       if delta_t > 1:
         time.sleep(delta_t / 1000.0 / self.speed)
+
       parser = self.parsers[line_j["event_type"]]
       if parser.parse(line_j["data"]):
         for value in parser.values():
@@ -200,12 +203,17 @@ if __name__ == "__main__":
     log_replayer.run()
     quit()
 
-  ant_server = ANT_SERVER(netkey=NETKEY, \
-                          ant_devices = ["hr", "speed_cad", "power"], \
-                          was = websocket_ant_server)
-  ant_server._log_decoded = args.v
-  ant_server._log_raw_data = args.enable_log #TODO: write to ./logs/YYYYMMDD-HHMM.txt
-  ant_server.start()
+  for i in range(1, 3):
+    try:
+      ant_server = ANT_SERVER(netkey=NETKEY, \
+                              ant_devices = ["hr", "speed_cad", "power"], \
+                              was = websocket_ant_server)
+      ant_server._log_decoded = args.v
+      ant_server._log_raw_data = args.enable_log #TODO: write to ./logs/YYYYMMDD-HHMM.txt
+      ant_server.start()
+      break
+    except AntException:
+      print "ERR: Failed to setup ant server. Retrying...", i
 
   while True:
     try:
