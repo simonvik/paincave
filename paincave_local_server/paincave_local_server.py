@@ -145,9 +145,11 @@ class ANT_SERVER():
     self._log_raw(event_type, data)
 
     parser = self.parsers[event_type]
-    if parser.parse(data):
-      for value in parser.values():
-        self.was.send_to_all(json.dumps(value))
+    values = parser.parse(data)
+    if values:
+      for value in antparsers.Parser.to_json(values):
+        print "Decoded value: %s" % value
+        self.was.send_to_all(value)
         if self._log_decoded:
           print value
 
@@ -189,8 +191,9 @@ class LogReplayer():
         time.sleep(delta_t / 1000.0 / self.speed)
 
       parser = self.parsers[line_j["event_type"]]
-      if parser.parse(line_j["data"]):
-        for value in parser.values():
+      values = parser.parse(line_j["data"])
+      if values:
+        for value in antparsers.Parser.to_json(values):
           print "Decoded value: %s" % value
           self.was.send_to_all(json.dumps(value))
 

@@ -4,23 +4,39 @@ import json
 def _byte_wrap_delta(x, y):
   return x - y + 256 if x - y < -127 else x - y
 
-class Hr():
+class Parser():
   def __init__(self):
-    self._hr = 0
-
-  def hr(self):
-    return self._hr
-
-  def values(self):
-    return [{"event_type" : "hr", "value" : self._hr}]
+    self._values = {}
 
   def parse(self, msg):
-    self._hr = msg[-1]
-    return True
+    raise NotImplementedError()
 
+  def values(self):
+    return self._values
 
-class Power():
+  def build_dict(self, keys):
+    ret = dict()
+    for key in keys:
+      ret[key] = self._values[key]
+    return ret
+
+  @staticmethod
+  def to_json(values):
+    ret = []
+    for key in values:
+      print key , "-" , values[key]
+      ret.append({"event_type" : key, "value" : values[key]})
+    return ret
+
+class Hr(Parser):
+  def parse(self, msg):
+    self._values["hr"] = msg[-1]
+    return self.build_dict(["hr"])
+
+class Power(Parser):
   def __init__(self):
+    Parser.__init__(self)
+
     self._cad = 0         # [0-255] rpm
     self._prev_time = 0   # 1/2048 s
     self._prev_torque = 0 # 1/32 Nm
@@ -53,26 +69,13 @@ class Power():
       0x51 : self.handle_0x51,
       0x52 : self.handle_0x52}
 
-  def power(self):
-    return self._power
-
-  def values(self):
-    return \
-    [
-      {"event_type" : "power",
-       "value" : str(self._power)
-      },
-      {"event_type" : "cad",
-       "value" : str(self._cad),
-       "source" : "power"
-      }
-    ]
-
   def parse(self, msg):
     data_page = msg[0]
     if data_page in self._message_handlers:
       return self._message_handlers[data_page](msg)
-    return False
+    else:
+      print "WRN: Unhandled data page from power meter:", data_page
+      return False
 
   def handle_0x10(self, msg):
     # Standard Power-Only Main Data Page (0x10)
@@ -86,9 +89,14 @@ class Power():
       self._0x10_acc_power = msg[5] * 256 + msg[4]
       self._0x10_current_power = msg[7] * 256 + msg[6]
 
-      print "Accumulated Power: ", self._0x10_acc_power
-      print "Instant Power: ", self._0x10_current_power
-      return True
+      self._values["power_0x10"] = self._0x10_current_power
+      self._values["acc_power_0x10"] = self._0x10_acc_power
+      self._values["cad_0x10"] = self._0x10_acc_power
+      return self.build_dict([
+          "power_0x10",
+          "acc_power_0x10",
+          "cad_0x10"
+        ])
 
   def handle_0x12(self, msg):
     # Standard Crank Torque Main Data Page (0x12)
@@ -114,18 +122,11 @@ class Power():
       self._cad = msg[3]
       self._prev_time = time
       self._prev_torque = torque
-
-      # angular_vel = 2 * math.pi * delta_count / (delta_time / 2048)
-      # power = delta_torque * angular_vel / 32
-      # power = self.pi_times_128 * delta_torque * delta_count / delta_time
       self._power = self._pi_times_128 * delta_torque / delta_time
 
-      # print "Ang vel: ", angular_vel
-      # print "Time:  ", time
-      # print "dTime: ", delta_time
-      # print "Torque: ", delta_torque
-      print "Power: ", self._power, " W"
-      return True
+      self._values["power"] = self._power
+      self._values["cad"] = self._cad
+      return self.build_dict(["power", "cad"])
 
   def handle_0x13(self, msg):
     # Torque Effectiveness and Pedal Smoothness Main Data Page (0x13)
@@ -134,98 +135,89 @@ class Power():
       return False
     self._0x13_count = msg[1]
 
-    left_torque_effectiveness = msg[2] / 2.0 if msg[2] != 0xFF else msg[2]
-    right_torque_effectiveness = msg[3] / 2.0 if msg[3] != 0xFF else msg[3]
-    left_smoothness = msg[4] / 2.0 if msg[4] != 0xFF else msg[4]
-    right_smoothness = msg[5] / 2.0 if msg[5] != 0xFF else msg[5]
+    self._values["left_torque_effectiveness"] = msg[2] / 2.0 if msg[2] != 0xFF else msg[2]
+    self._values["right_torque_effectiveness"] = msg[3] / 2.0 if msg[3] != 0xFF else msg[3]
+    self._values["left_smoothness"] = msg[4] / 2.0 if msg[4] != 0xFF else msg[4]
+    self._values["right_smoothness"] = msg[5] / 2.0 if msg[5] != 0xFF else msg[5]
 
-    print "Torque effectiveness: ", left_torque_effectiveness, "/", right_torque_effectiveness
-    print "Smoothness: ", left_smoothness, "/", right_smoothness
-
+    return self.build_dict([
+        "left_torque_effectiveness",
+        "right_torque_effectiveness",
+        "left_smoothness",
+        "right_smoothness"
+      ])
 
   def handle_0x50(self, msg):
     # Common Data Page 80: Manufacturer's Information
-    print msg
-    hw_revision = msg[3]
-    print "HW revision: ", hw_revision
-
-    manufacturer_id = msg[4] | (msg[5] << 8)
-    print "Manufacturer id: ", manufacturer_id
-
-    model_number = msg[6] | (msg[7] << 8)
-    print "Model number: ", model_number
+    self._values["hw_revision"] = msg[3]
+    self._values["manufacturer_id"] = msg[4] | (msg[5] << 8)
+    self._values["model_number"] = msg[6] | (msg[7] << 8)
+    return self.build_dict([
+        "hw_revision",
+        "manufacturer_id",
+        "model_number"
+      ])
 
   def handle_0x51(self, msg):
     # Common Page 81 (0x51) - Product Information
-    sw_rev = msg[3] / 10.0 + (msg[2] / 1000.0 if msg[2] != 0xFF else 0)
-    print "SW revision: ", sw_rev
-
-    serial_number = msg[4] | (msg[5] << 8) | (msg[6] << 16) | (msg[7] << 24)
-    print "Serial number: ", serial_number
+    self._values["sw_revision"] = msg[3] / 10.0 + (msg[2] / 1000.0 if msg[2] != 0xFF else 0)
+    self._values["serial_number"] = msg[4] | (msg[5] << 8) | (msg[6] << 16) | (msg[7] << 24)
+    return self.build_dict([
+        "sw_revision",
+        "serial_number"
+      ])
 
   def handle_0x52(self, msg):
     # Common Page 82 (0x52): Battery Status
-    battery_voltage = (msg[7] & 0x0F) + msg[6] / 256.0
-    print "Battery voltage: ", battery_voltage
-
+    self._values["battery_voltage"] = (msg[7] & 0x0F) + msg[6] / 256.0
     battery_status = (msg[7] & 0x7F) >> 4
-    print "Battery status: ", self._0x52_battery_status_names[battery_status]
+    self._values["battery_status"] = self._0x52_battery_status_names[battery_status]
 
     resolution = 2 if msg[7] & 128 == 128 else 6
-    self._0x52_battery_operating_time = (msg[3] + msg[4] * 256 + msg[5] * 65536) / resolution
-    print "Operating time (hours): ", (self._0x52_battery_operating_time / 3600.0)
+    self._values["battery_operating_time"] = (msg[3] + msg[4] * 256 + msg[5] * 65536) / resolution
 
+    return self.build_dict([
+        "battery_voltage",
+        "battery_status",
+        "battery_operating_time"
+      ])
 
-class SpeedCadence():
+class SpeedCadence(Parser):
   def __init__(self):
+    Parser.__init__(self)
+
     self._speed = 0
-    self._cadence = 0
-    self._prev_cadence = {"time" : 0, "count" : -1}
+    self._cad = 0
+    self._prev_cad = {"time" : 0, "count" : -1}
     self._prev_speed = {"time" : 0, "count" : -1}
 
-  def speed(self):
-    return self._speed
-
-  def cadence(self):
-    return self._cadence
-
-  def values(self):
-    return \
-    [
-      {"event_type" : "speed",
-       "value" : str(self._speed * 3.6)
-      },
-      {"event_type" : "cad",
-       "value" : str(self._cadence),
-       "source" : "speed_cad"
-      }
-    ]
-
   def parse(self, msg):
-    parsed_cadence = self.parse_cadence(msg)
-    parsed_speed = self.parse_speed(msg)
-    if parsed_speed or parsed_cadence:
-      return True
-    return False
+    ret = {}
+    if self._parse_speed(msg):
+      ret["speed"] = self._values["speed"]
+    if self._parse_cadence(msg):
+      ret["cad"] = self._values["cad"]
+    return ret if len(ret) > 0 else False
 
-  def parse_cadence(self, msg):
+  def _parse_cadence(self, msg):
     ret = False
     cad_event_time = msg[1] * 256 + msg[0]
     cad_event_count = msg[3] * 256 + msg[2]
-    cad_event_time_delta = cad_event_time - self._prev_cadence["time"]
+    cad_event_time_delta = cad_event_time - self._prev_cad["time"]
     # ignore redundant, old or invalid data
-    if self._prev_cadence["count"] >= 0 \
-        and cad_event_count != self._prev_cadence["count"] \
+    if self._prev_cad["count"] >= 0 \
+        and cad_event_count != self._prev_cad["count"] \
         and cad_event_time_delta > 0 \
         and cad_event_time_delta < 6000:
-      self._cadence = (60 * (cad_event_count - self._prev_cadence["count"]) * 1024) \
+      self._cad = (60 * (cad_event_count - self._prev_cad["count"]) * 1024) \
             / cad_event_time_delta
+      self._values["cad"] = self._cad
       ret = True
-    self._prev_cadence["time"] = cad_event_time
-    self._prev_cadence["count"] = cad_event_count
+    self._prev_cad["time"] = cad_event_time
+    self._prev_cad["count"] = cad_event_count
     return ret
 
-  def parse_speed(self, msg):
+  def _parse_speed(self, msg):
     ret = False
     speed_event_time = msg[5] * 256 + msg[4]
     speed_event_count = msg[7] * 256 + msg[6]
@@ -236,6 +228,7 @@ class SpeedCadence():
         and speed_event_time_delta > 0:
       self._speed = (2.096 * (speed_event_count - self._prev_speed["count"]) * 1024) \
               / speed_event_time_delta
+      self._values["speed"] = self._speed
       ret = True
     self._prev_speed["time"] = speed_event_time
     self._prev_speed["count"] = speed_event_count
