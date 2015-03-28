@@ -211,7 +211,7 @@ class SpeedCadence(Parser):
         and cad_event_time_delta < 6000:
       self._cad = (60 * (cad_event_count - self._prev_cad["count"]) * 1024) \
             / cad_event_time_delta
-      self._values["cad"] = self._cad
+      self._values["cad"] = str(self._cad)
       ret = True
     self._prev_cad["time"] = cad_event_time
     self._prev_cad["count"] = cad_event_count
@@ -228,7 +228,7 @@ class SpeedCadence(Parser):
         and speed_event_time_delta > 0:
       self._speed = (2.096 * (speed_event_count - self._prev_speed["count"]) * 1024) \
               / speed_event_time_delta
-      self._values["speed"] = self._speed
+      self._values["speed"] = str(self._speed * 3.6)
       ret = True
     self._prev_speed["time"] = speed_event_time
     self._prev_speed["count"] = speed_event_count
