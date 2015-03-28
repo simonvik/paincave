@@ -227,7 +227,7 @@ if __name__ == "__main__":
         ant_server.stop()
       break
     except AntException:
-      print "ERR: Failed to setup ant server. Retrying... %d", i
+      print "ERR: Failed to setup ant server. Retrying...", i
 
 
   print "Killing websocket"
