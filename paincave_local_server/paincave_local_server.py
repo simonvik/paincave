@@ -43,7 +43,7 @@ class Paincave():
       log_config = {"log_decoded" : self._args.v,
                     "log_raw_data" : self._args.enable_log}
       antserver = AntServer.setup_and_start(ant_devices = ["hr", "speed_cad", "power"], \
-                                was = self._websocket_server,
+                                websocket_server = self._websocket_server,
                                 log_config = log_config)
     except KeyboardInterrupt:
       pass

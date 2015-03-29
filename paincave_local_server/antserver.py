@@ -18,12 +18,12 @@ except ImportError as e:
 
 
 class AntServer():
-  def __init__(self, netkey, ant_devices, was):
+  def __init__(self, netkey, ant_devices, websocket_server):
     self.ant_devices = ant_devices
     self.channels = []
     self.netkey = netkey
     self.antnode = None
-    self.was = was
+    self.websocket_server = websocket_server
     self.ant_modes = {
       "speed_cad" : {
         "device_id" : 121,
@@ -58,12 +58,12 @@ class AntServer():
 
 
   @staticmethod
-  def setup_and_start(ant_devices, was, log_config):
+  def setup_and_start(ant_devices, websocket_server, log_config):
     NETKEY = [0xb9, 0xa5, 0x21, 0xfb, 0xbd, 0x72, 0xc3, 0x45]
     antserver = None
     for i in range(1, 3):
       try:
-        antserver = AntServer(NETKEY, ant_devices, was)
+        antserver = AntServer(NETKEY, ant_devices, websocket_server)
         antserver._log_raw_data = log_config["log_raw_data"]
         antserver._log_decoded = log_config["log_decoded"]
         try:
@@ -132,7 +132,7 @@ class AntServer():
     values = parser.parse(data)
     if values:
       for value in antparsers.Parser.to_json(values):
-        self.was.send_to_all(value)
+        self.websocket_server.send_to_all(value)
         if self._log_decoded:
           print(value)
 
