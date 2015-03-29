@@ -44,7 +44,7 @@ class Parser():
   def to_json(values):
     ret = []
     for key in values:
-      ret.append({"event_type" : key, "value" : values[key]})
+      ret.append(json.dumps({"event_type" : key, "value" : str(values[key])}))
     return ret
 
 class Hr(Parser):
