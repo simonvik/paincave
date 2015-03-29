@@ -48,7 +48,6 @@ svg {
                 if(msg.event_type == "power"){
                     power.innerHTML = Math.round(msg.value);
                     tick(msg.value)
-
                 }
 
             };
@@ -253,10 +252,10 @@ function tick(power) {
       .attr("d", line)
       .attr("transform", null)
     .transition()
-      .duration(500)
-      .ease("linear")
-      .attr("transform", "translate(" + x(-1) + ",0)")
-      .each("end", tick);
+      .duration(0)
+//      .ease("linear")
+      .attr("transform", "translate(" + x(-1) + ",0)");
+//      .each("end", tick);
 
   // pop the old data point off the front
   data.shift();
