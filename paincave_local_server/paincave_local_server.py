@@ -1,6 +1,7 @@
 # global imports
 import argparse
 import json
+import logging
 import os.path
 import random
 import struct
@@ -109,6 +110,7 @@ class Paincave():
       pass
 
   def main(self):
+    logging.basicConfig()
     self._parse_args()
 
     self._websocket_ant_server = WebsocketAntServer()
