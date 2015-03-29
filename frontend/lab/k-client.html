@@ -1,0 +1,271 @@
+<html>
+<head>
+  <title>Paincave</title>
+
+
+<style>
+
+svg {
+  font: 10px sans-serif;
+}
+
+.line {
+  fill: none;
+  stroke: #000;
+  stroke-width: 1.5px;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+</style>
+    <script src="http://d3js.org/d3.v3.js"></script>
+    <script type="text/javascript">
+
+        var ws;
+        document.addEventListener('DOMContentLoaded', function() {
+            ws = new WebSocket("ws://localhost:13254/");
+
+            ws.onmessage = function(e) {
+                console.log(e.data);
+                msg = JSON.parse(e.data);
+                var hr = document.getElementById("hr_value");
+                var cad = document.getElementById("cad_value");
+                var power = document.getElementById("power_value");
+
+                if(msg.event_type == "hr"){
+                    hr.innerHTML = Math.round(msg.value);
+                }
+
+                if(msg.event_type == "cad"){
+                    cad.innerHTML = Math.round(msg.value);
+                }
+
+                if(msg.event_type == "power"){
+                    power.innerHTML = Math.round(msg.value);
+                    tick(msg.value)
+
+                }
+
+            };
+        });
+
+
+    </script>
+
+
+    <style type="text/css">
+
+        body {
+            padding:0px;
+            margin:0px;
+            font-family: sans-serif;
+            background-color:#262528;
+        }
+        .topbar {
+            display: flex;
+        }
+
+        .topbar div {
+            flex: 1;
+        }
+
+        .header_label {
+            float:left;
+            color:#ccc;
+            text-transform: uppercase;
+        }
+
+        .infobox {
+            background-color:#262528;
+            font-size: 0.5vw;
+            font-weight: bold;
+            padding:10px;
+        }
+
+        .infobox_center {
+
+            font-size: 0.5vw;
+            font-weight: bold;
+            padding:10px;
+        }
+        .infobox_value {
+            font-size: 3vw;
+            color:#fff;
+        }
+
+        .panel {
+            border-bottom:1px solid #000;
+        }
+
+        .line_bright {
+             border-top:1px solid #444;
+        }
+
+
+        .line_dark {
+             border-top:1px solid #111;
+        }
+
+
+        .panel_center {
+             //box-shadow: inset 0px 0px 37px 0px rgba(0,0,0,0.75);
+            box-shadow: inset 12px 0 15px -4px rgba(0, 0, 0, 0.40), inset -12px 0 8px -4px rgba(0, 0, 0, 0.40);
+            background-color:#111;
+
+        }
+
+        .graph {
+            display: flex;
+            background-color:#ccc;
+        }
+
+        .graph div {
+            flex: 1;
+            background-color:#ccc;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <div class="panel">
+            <div class="infobox">
+                <div class="header_label">
+                    power
+                </div>
+                <div class="infobox_value" id="power_value">
+                    ---
+                </div>
+            </div>
+            <div class="infobox line_dark">
+                <div class="header_label">
+                    target<br />power
+                </div>
+                <div class="infobox_value">
+                    308
+                </div>
+            </div>
+        </div>
+
+        <div class="panel_center">
+            <div class="infobox_center">
+                <div class="header_label">
+                    interval<br />time
+                </div>
+                <div class="infobox_value">
+                    01:19
+                </div>
+            </div>
+            <div class="infobox_center line_bright">
+                <div class="header_label">
+                    total<br />time
+                </div>
+                <div class="infobox_value">
+                    0:00:03
+                </div>
+            </div>
+        </div>
+        <div class="panel">
+            <div class="infobox">
+                <div class="header_label">
+                    heart<br />rate
+                </div>
+                <div class="infobox_value" id="hr_value">
+                    ---
+                </div>
+            </div>
+            <div class="infobox line_dark">
+                <div class="header_label">
+                    cadence
+                </div>
+                <div class="infobox_value" id="cad_value">
+                    ---
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="graph">
+        Hello?
+
+<script>
+
+var n = 400,
+    random = d3.random.normal(0, .2),
+    data = d3.range(n).map(random);
+
+var margin = {top: 20, right: 20, bottom: 20, left: 40},
+    width = 960 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+var x = d3.scale.linear()
+    .domain([0, n - 1])
+    .range([0, width]);
+
+var y = d3.scale.linear()
+    .domain([0, 600])
+    .range([height, 0]);
+
+var line = d3.svg.line()
+    .x(function(d, i) { return x(i); })
+    .y(function(d, i) { return y(d); });
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+svg.append("defs").append("clipPath")
+    .attr("id", "clip")
+  .append("rect")
+    .attr("width", width)
+    .attr("height", height);
+
+svg.append("g")
+    .attr("class", "x axis")
+    .attr("transform", "translate(0," + y(0) + ")")
+    .call(d3.svg.axis().scale(x).orient("bottom"));
+
+svg.append("g")
+    .attr("class", "y axis")
+    .call(d3.svg.axis().scale(y).orient("left"));
+
+var path = svg.append("g")
+    .attr("clip-path", "url(#clip)")
+  .append("path")
+    .datum(data)
+    .attr("class", "line")
+    .attr("d", line);
+
+
+function tick(power) {
+
+  // push a new data point onto the back
+  data.push(power);
+
+  // redraw the line, and slide it to the left
+  path
+      .attr("d", line)
+      .attr("transform", null)
+    .transition()
+      .duration(500)
+      .ease("linear")
+      .attr("transform", "translate(" + x(-1) + ",0)")
+      .each("end", tick);
+
+  // pop the old data point off the front
+  data.shift();
+
+}
+
+</script>
+    </div>
+
+
+</body>
+</html>
