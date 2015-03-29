@@ -2,14 +2,14 @@
 import threading
 
 # local imports
-from websocket import WebSocketsServer
+import websocket
 
 
 class WebsocketServer:
   def __init__(self):
     self.port = 13254
     self.server_thread = None
-    self.server = WebSocketsServer(self.port, "0.0.0.0")
+    self.server = websocket.WebSocketsServer(self.port, "0.0.0.0")
     self.server.set_fn_new_client(self.client_connect)
     self.server.set_fn_client_left(self.client_left)
     self.server.set_fn_message_received(self.message_received)
