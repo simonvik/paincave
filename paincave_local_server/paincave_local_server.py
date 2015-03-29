@@ -7,6 +7,8 @@ import random
 import time
 import os.path
 
+import antparsers
+
 from datetime import datetime
 from websocket import WebSocketsServer
 import argparse
@@ -19,8 +21,6 @@ try:
 except ImportError as e:
   print ("Failed to load ant libs : \n%s" % e)
   print ("Download ant-lib from https://github.com/simonvik/openant")
-
-import antparsers
 
 class WEBSOCKET_ANT_SERVER:
   def __init__(self):
@@ -198,40 +198,59 @@ class LogReplayer():
           self.was.send_to_all(json.dumps(value))
 
 
-if __name__ == "__main__":
+class Paincave():
+  def __init__(self):
+    self._NETKEY = [0xb9, 0xa5, 0x21, 0xfb, 0xbd, 0x72, 0xc3, 0x45]
 
-  parser = argparse.ArgumentParser(description='Paincave server')
-  parser.add_argument('-l', '--replay-log', metavar='logfile', help='Replays a log file')
-  parser.add_argument('--replay-speed', metavar='speed', default=1.0, type=float, help='Replay speed factor')
-  parser.add_argument('-v', action='store_true', default=False, help='Verbose, prints parsed data')
-  parser.add_argument('--enable-log', action='store_true', default=True, help='Logs raw data')
-  args = parser.parse_args()
+  def _parse_args(self):
+    parser = argparse.ArgumentParser(description='Paincave server')
+    parser.add_argument('-l', '--replay-log', metavar='logfile', help='Replays a log file')
+    parser.add_argument('--replay-speed', metavar='speed', default=1.0, type=float, help='Replay speed factor')
+    parser.add_argument('-v', action='store_true', default=False, help='Verbose, prints parsed data')
+    parser.add_argument('--enable-log', action='store_true', default=True, help='Logs raw data')
+    self._args = parser.parse_args()
 
-  NETKEY = [0xb9, 0xa5, 0x21, 0xfb, 0xbd, 0x72, 0xc3, 0x45]
-
-  websocket_ant_server = WEBSOCKET_ANT_SERVER()
-  websocket_ant_server.start()
-
-  if args.replay_log:
-    log_replayer = LogReplayer(args.replay_log, args.replay_speed, websocket_ant_server)
-    log_replayer.run()
-    quit()
-
-  for i in range(1, 3):
+  def _replay_log(self):
+    log_replayer = LogReplayer(self._args.replay_log, self._args.replay_speed, self._websocket_ant_server)
     try:
-      ant_server = ANT_SERVER(netkey=NETKEY, \
-                              ant_devices = ["hr", "speed_cad", "power"], \
-                              was = websocket_ant_server)
-      ant_server._log_decoded = args.v
-      ant_server._log_raw_data = args.enable_log #TODO: write to ./logs/YYYYMMDD-HHMM.txt
+      log_replayer.run()
+    except KeyboardInterrupt:
+      pass
+
+  def _setup_antserver(self):
+    for i in range(1, 3):
       try:
-        ant_server.start()
-      except KeyboardInterrupt:
-        ant_server.stop()
-      break
-    except AntException:
-      print "ERR: Failed to setup ant server. Retrying...", i
+        ant_server = ANT_SERVER(netkey=self._NETKEY, \
+                                ant_devices = ["hr", "speed_cad", "power"], \
+                                was = self._websocket_ant_server)
+        ant_server._log_decoded = self._args.v
+        ant_server._log_raw_data = self._args.enable_log #TODO: write to ./logs/YYYYMMDD-HHMM.txt
+        try:
+          ant_server.start()
+        except KeyboardInterrupt:
+          pass
+        finally:
+          ant_server.stop()
+        break
+      except AntException:
+        print "ERR: Failed to setup ant server. Retrying...", i
 
 
-  print "Killing websocket"
-  websocket_ant_server.stop()
+  def main(self):
+    self._parse_args()
+
+    self._websocket_ant_server = WEBSOCKET_ANT_SERVER()
+    self._websocket_ant_server.start()
+
+    try:
+      if self._args.replay_log:
+        self._replay_log()
+      else:
+        self._setup_antserver()
+    finally:
+      print "INF: Killing websocket"
+      self._websocket_ant_server.stop()
+
+
+if __name__ == "__main__":
+  Paincave().main()
