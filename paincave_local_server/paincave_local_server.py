@@ -22,7 +22,7 @@ except ImportError as e:
   print ("Failed to load ant libs : \n%s" % e)
   print ("Download ant-lib from https://github.com/simonvik/openant")
 
-class WEBSOCKET_ANT_SERVER:
+class WebsocketAntServer:
   def __init__(self):
     self.port = 13254
     self.server_thread = None
@@ -53,7 +53,7 @@ class WEBSOCKET_ANT_SERVER:
     self.server.killall()
 
 
-class ANT_SERVER():
+class AntServer():
   def __init__(self, netkey, ant_devices, was):
     self.ant_devices = ant_devices
     self.channels = []
@@ -217,29 +217,31 @@ class Paincave():
     except KeyboardInterrupt:
       pass
 
+  def _run_antserver(self):
+    ant_server = AntServer(netkey=self._NETKEY, \
+                           ant_devices = ["hr", "speed_cad", "power"], \
+                           was = self._websocket_ant_server)
+    ant_server._log_decoded = self._args.v
+    ant_server._log_raw_data = self._args.enable_log
+    try:
+      ant_server.start()
+    except KeyboardInterrupt:
+      pass
+    finally:
+      ant_server.stop()
+
   def _setup_antserver(self):
     for i in range(1, 3):
       try:
-        ant_server = ANT_SERVER(netkey=self._NETKEY, \
-                                ant_devices = ["hr", "speed_cad", "power"], \
-                                was = self._websocket_ant_server)
-        ant_server._log_decoded = self._args.v
-        ant_server._log_raw_data = self._args.enable_log #TODO: write to ./logs/YYYYMMDD-HHMM.txt
-        try:
-          ant_server.start()
-        except KeyboardInterrupt:
-          pass
-        finally:
-          ant_server.stop()
+        self._run_antserver()
         break
       except AntException:
         print "ERR: Failed to setup ant server. Retrying...", i
 
-
   def main(self):
     self._parse_args()
 
-    self._websocket_ant_server = WEBSOCKET_ANT_SERVER()
+    self._websocket_ant_server = WebsocketAntServer()
     self._websocket_ant_server.start()
 
     try:
