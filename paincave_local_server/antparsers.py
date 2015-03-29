@@ -4,6 +4,26 @@ import json
 def _byte_wrap_delta(x, y):
   return x - y + 256 if x - y < -127 else x - y
 
+# String constants for each sensor event
+class S():
+  hr = "hr"
+  speed = "speed"
+  cad = "cad"
+  power = "power"
+  acc_power = "acc_power"
+  l_trq_eff = "left_torque_effectiveness"
+  r_trq_eff = "right_torque_effectiveness"
+  l_smoothness = "left_smoothness"
+  r_smoothness = "right_smoothness"
+  hw_revision = "hw_revision"
+  manufacturer_id = "manufacturer_id"
+  model_number = "model_number"
+  sw_revision = "sw_revision"
+  serial_number = "serial_number"
+  battery_voltage = "battery_voltage"
+  battery_status = "battery_status"
+  battery_operating_time = "battery_operating_time"
+
 class Parser():
   def __init__(self):
     self._values = {}
@@ -29,8 +49,8 @@ class Parser():
 
 class Hr(Parser):
   def parse(self, msg):
-    self._values["hr"] = msg[-1]
-    return self.build_dict(["hr"])
+    self._values[S.hr] = msg[-1]
+    return self.build_dict([S.hr])
 
 class Power(Parser):
   def __init__(self):
@@ -88,13 +108,13 @@ class Power(Parser):
       self._0x10_acc_power = msg[5] * 256 + msg[4]
       self._0x10_current_power = msg[7] * 256 + msg[6]
 
-      self._values["power"] = self._0x10_current_power
-      self._values["acc_power"] = self._0x10_acc_power
-      self._values["cad"] = self._0x10_cad
+      self._values[S.power] = self._0x10_current_power
+      self._values[S.acc_power] = self._0x10_acc_power
+      self._values[S.cad] = self._0x10_cad
       return self.build_dict([
-          "power",
-          "acc_power",
-          "cad"
+          S.power,
+          S.acc_power,
+          S.cad
         ])
 
   def handle_0x12(self, msg):
@@ -123,9 +143,9 @@ class Power(Parser):
       self._prev_torque = torque
       self._power = self._pi_times_128 * delta_torque / delta_time
 
-      self._values["power"] = self._power
-      self._values["cad"] = self._cad
-      return self.build_dict(["power", "cad"])
+      self._values[S.power] = self._power
+      self._values[S.cad] = self._cad
+      return self.build_dict([S.power, S.cad])
 
   def handle_0x13(self, msg):
     # Torque Effectiveness and Pedal Smoothness Main Data Page (0x13)
@@ -134,51 +154,51 @@ class Power(Parser):
       return False
     self._0x13_count = msg[1]
 
-    self._values["left_torque_effectiveness"] = msg[2] / 2.0 if msg[2] != 0xFF else msg[2]
-    self._values["right_torque_effectiveness"] = msg[3] / 2.0 if msg[3] != 0xFF else msg[3]
-    self._values["left_smoothness"] = msg[4] / 2.0 if msg[4] != 0xFF else msg[4]
-    self._values["right_smoothness"] = msg[5] / 2.0 if msg[5] != 0xFF else msg[5]
+    self._values[S.l_trq_eff] = msg[2] / 2.0 if msg[2] != 0xFF else msg[2]
+    self._values[S.r_trq_eff] = msg[3] / 2.0 if msg[3] != 0xFF else msg[3]
+    self._values[S.l_smoothness] = msg[4] / 2.0 if msg[4] != 0xFF else msg[4]
+    self._values[S.r_smoothness] = msg[5] / 2.0 if msg[5] != 0xFF else msg[5]
 
     return self.build_dict([
-        "left_torque_effectiveness",
-        "right_torque_effectiveness",
-        "left_smoothness",
-        "right_smoothness"
+        S.l_trq_eff,
+        S.r_trq_eff,
+        S.l_smoothness,
+        S.r_smoothness
       ])
 
   def handle_0x50(self, msg):
     # Common Data Page 80: Manufacturer's Information
-    self._values["hw_revision"] = msg[3]
-    self._values["manufacturer_id"] = msg[4] | (msg[5] << 8)
-    self._values["model_number"] = msg[6] | (msg[7] << 8)
+    self._values[S.hw_revision] = msg[3]
+    self._values[S.manufacturer_id] = msg[4] | (msg[5] << 8)
+    self._values[S.model_number] = msg[6] | (msg[7] << 8)
     return self.build_dict([
-        "hw_revision",
-        "manufacturer_id",
-        "model_number"
+        S.hw_revision,
+        S.manufacturer_id,
+        S.model_number
       ])
 
   def handle_0x51(self, msg):
     # Common Page 81 (0x51) - Product Information
-    self._values["sw_revision"] = msg[3] / 10.0 + (msg[2] / 1000.0 if msg[2] != 0xFF else 0)
-    self._values["serial_number"] = msg[4] | (msg[5] << 8) | (msg[6] << 16) | (msg[7] << 24)
+    self._values[S.sw_revision] = msg[3] / 10.0 + (msg[2] / 1000.0 if msg[2] != 0xFF else 0)
+    self._values[S.serial_number] = msg[4] | (msg[5] << 8) | (msg[6] << 16) | (msg[7] << 24)
     return self.build_dict([
-        "sw_revision",
-        "serial_number"
+        S.sw_revision,
+        S.serial_number
       ])
 
   def handle_0x52(self, msg):
     # Common Page 82 (0x52): Battery Status
-    self._values["battery_voltage"] = (msg[7] & 0x0F) + msg[6] / 256.0
+    self._values[S.battery_voltage] = (msg[7] & 0x0F) + msg[6] / 256.0
     battery_status = (msg[7] & 0x7F) >> 4
-    self._values["battery_status"] = self._0x52_battery_status_names[battery_status]
+    self._values[S.battery_status] = self._0x52_battery_status_names[battery_status]
 
     resolution = 2 if msg[7] & 128 == 128 else 6
-    self._values["battery_operating_time"] = (msg[3] + msg[4] * 256 + msg[5] * 65536) / resolution
+    self._values[S.battery_operating_time] = (msg[3] + msg[4] * 256 + msg[5] * 65536) / resolution
 
     return self.build_dict([
-        "battery_voltage",
-        "battery_status",
-        "battery_operating_time"
+        S.battery_voltage,
+        S.battery_status,
+        S.battery_operating_time
       ])
 
 class SpeedCadence(Parser):
@@ -193,9 +213,9 @@ class SpeedCadence(Parser):
   def parse(self, msg):
     ret = {}
     if self._parse_speed(msg):
-      ret["speed"] = self._values["speed"]
+      ret[S.speed] = self._values[S.speed]
     if self._parse_cadence(msg):
-      ret["cad"] = self._values["cad"]
+      ret[S.cad] = self._values[S.cad]
     return ret if len(ret) > 0 else False
 
   def _parse_cadence(self, msg):
@@ -210,7 +230,7 @@ class SpeedCadence(Parser):
         and cad_event_time_delta < 6000:
       self._cad = (60 * (cad_event_count - self._prev_cad["count"]) * 1024) \
             / cad_event_time_delta
-      self._values["cad"] = str(self._cad)
+      self._values[S.cad] = str(self._cad)
       ret = True
     self._prev_cad["time"] = cad_event_time
     self._prev_cad["count"] = cad_event_count
@@ -227,7 +247,7 @@ class SpeedCadence(Parser):
         and speed_event_time_delta > 0:
       self._speed = (2.096 * (speed_event_count - self._prev_speed["count"]) * 1024) \
               / speed_event_time_delta
-      self._values["speed"] = str(self._speed * 3.6)
+      self._values[S.speed] = str(self._speed * 3.6)
       ret = True
     self._prev_speed["time"] = speed_event_time
     self._prev_speed["count"] = speed_event_count
