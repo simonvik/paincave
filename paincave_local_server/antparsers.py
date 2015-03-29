@@ -89,13 +89,13 @@ class Power(Parser):
       self._0x10_acc_power = msg[5] * 256 + msg[4]
       self._0x10_current_power = msg[7] * 256 + msg[6]
 
-      self._values["power_0x10"] = self._0x10_current_power
-      self._values["acc_power_0x10"] = self._0x10_acc_power
-      self._values["cad_0x10"] = self._0x10_cad
+      self._values["power"] = self._0x10_current_power
+      self._values["acc_power"] = self._0x10_acc_power
+      self._values["cad"] = self._0x10_cad
       return self.build_dict([
-          "power_0x10",
-          "acc_power_0x10",
-          "cad_0x10"
+          "power",
+          "acc_power",
+          "cad"
         ])
 
   def handle_0x12(self, msg):
