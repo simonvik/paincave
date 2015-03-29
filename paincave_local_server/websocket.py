@@ -128,7 +128,7 @@ class WebSocketsServer(ThreadingMixIn, TCPServer, API):
 	def killall(self):
 		for client in self.clients:
 			client["handler"].keep_alive = 0
-			client["handler"].send_message("Bye")
+			client["handler"].send_message('{"event_type" : "server_shutdown", "value" : "kthxbye"}')
 
 
 class WebSocketHandler(StreamRequestHandler):
