@@ -91,7 +91,7 @@ class Power(Parser):
 
       self._values["power_0x10"] = self._0x10_current_power
       self._values["acc_power_0x10"] = self._0x10_acc_power
-      self._values["cad_0x10"] = self._0x10_acc_power
+      self._values["cad_0x10"] = self._0x10_cad
       return self.build_dict([
           "power_0x10",
           "acc_power_0x10",
