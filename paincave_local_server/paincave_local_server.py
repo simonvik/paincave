@@ -19,8 +19,8 @@ try:
   from ant.base.message import Message
   from ant.easy.exception import AntException
 except ImportError as e:
-  print ("Failed to load ant libs : \n%s" % e)
-  print ("Download ant-lib from https://github.com/simonvik/openant")
+  print("Failed to load ant libs : \n%s" % e)
+  print("Download ant-lib from https://github.com/simonvik/openant")
 
 class WebsocketAntServer:
   def __init__(self):
@@ -148,10 +148,9 @@ class AntServer():
     values = parser.parse(data)
     if values:
       for value in antparsers.Parser.to_json(values):
-        print "Decoded value: %s" % value
         self.was.send_to_all(value)
         if self._log_decoded:
-          print value
+          print(value)
 
   def _handle_hr(self, data):
     self._parse_and_send("hr", data)
@@ -194,7 +193,7 @@ class LogReplayer():
       values = parser.parse(line_j["data"])
       if values:
         for value in antparsers.Parser.to_json(values):
-          print "Decoded value: %s" % value
+          print(value)
           self.was.send_to_all(json.dumps(value))
 
 
@@ -236,7 +235,7 @@ class Paincave():
         self._run_antserver()
         break
       except AntException:
-        print "ERR: Failed to setup ant server. Retrying...", i
+        print("ERR: Failed to setup ant server. Retrying...", i)
 
   def main(self):
     self._parse_args()
@@ -250,7 +249,7 @@ class Paincave():
       else:
         self._setup_antserver()
     finally:
-      print "INF: Killing websocket"
+      print("INF: Killing websocket")
       self._websocket_ant_server.stop()
 
 

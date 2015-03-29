@@ -24,7 +24,6 @@ class Parser():
   def to_json(values):
     ret = []
     for key in values:
-      print key , "-" , values[key]
       ret.append({"event_type" : key, "value" : values[key]})
     return ret
 
@@ -74,7 +73,7 @@ class Power(Parser):
     if data_page in self._message_handlers:
       return self._message_handlers[data_page](msg)
     else:
-      print "WRN: Unhandled data page from power meter:", data_page
+      print("WRN: Unhandled data page from power meter:", data_page)
       return False
 
   def handle_0x10(self, msg):
@@ -82,7 +81,7 @@ class Power(Parser):
     delta_count = _byte_wrap_delta(msg[1], self._0x10_count)
     if (delta_count > 0):
       if (delta_count > 1):
-        print "WRN: delta_count:", delta_count
+        print("WRN: delta_count:", delta_count)
 
       self._0x10_count = msg[1]
       self._0x10_cad = msg[3]
@@ -103,19 +102,19 @@ class Power(Parser):
     delta_count = _byte_wrap_delta(msg[1], self._0x12_count)
     if (delta_count > 0):
       if (delta_count > 1):
-        print "WRN: delta_count:", delta_count
+        print("WRN: delta_count:", delta_count)
 
       time = msg[5] * 256 + msg[4]
       torque = msg[7] * 256 + msg[6]
 
       delta_time = time - self._prev_time
       if delta_time < 0:
-        print "INF: time wraps"
+        print("INF: time wraps")
         delta_time += 65536
 
       delta_torque = torque - self._prev_torque
       if delta_torque < 0:
-        print "INF: torque wraps"
+        print("INF: torque wraps")
         delta_torque += 65536
 
       self._0x12_count = msg[1]
