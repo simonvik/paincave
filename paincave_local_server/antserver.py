@@ -58,11 +58,12 @@ class AntServer():
 
 
   @staticmethod
-  def setup_and_start(netkey, ant_devices, was, log_config):
+  def setup_and_start(ant_devices, was, log_config):
+    NETKEY = [0xb9, 0xa5, 0x21, 0xfb, 0xbd, 0x72, 0xc3, 0x45]
     antserver = None
     for i in range(1, 3):
       try:
-        antserver = AntServer(netkey, ant_devices, was)
+        antserver = AntServer(NETKEY, ant_devices, was)
         antserver._log_raw_data = log_config["log_raw_data"]
         antserver._log_decoded = log_config["log_decoded"]
         try:
