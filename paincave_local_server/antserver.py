@@ -58,20 +58,20 @@ class AntServer():
 
 
   @staticmethod
-  def setup_and_start(ant_devices, websocket_server, log_config):
+  def setup_and_start(websocket_server, config):
     NETKEY = [0xb9, 0xa5, 0x21, 0xfb, 0xbd, 0x72, 0xc3, 0x45]
     antserver = None
     for i in range(1, 3):
       try:
-        antserver = AntServer(NETKEY, ant_devices, websocket_server)
-        antserver._log_raw_data = log_config["log_raw_data"]
-        antserver._log_decoded = log_config["log_decoded"]
+        antserver = AntServer(NETKEY, config["devices"], websocket_server)
+        antserver._log_raw_data = config["raw_logging"]
+        antserver._log_decoded = config["verbose"]
         try:
           antserver.start()
         except KeyboardInterrupt:
           pass
         finally:
-            antserver.stop()
+          antserver.stop()
         break
       except AntException:
         print("ERR: Failed to setup ant server. Retrying... %s" % i)
@@ -85,7 +85,8 @@ class AntServer():
     self._setup_channels()
 
   def stop(self):
-    self.antnode.stop()
+    if self.antnode:
+      self.antnode.stop()
 
   def __enter__(self):
     return self

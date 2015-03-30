@@ -6,10 +6,11 @@ import websocket
 
 
 class WebsocketServer:
-  def __init__(self):
-    self.port = 13254
+  def __init__(self, config):
+    self.port = int(config["port"])
+    self.host = config["host"]
     self.server_thread = None
-    self.server = websocket.WebSocketsServer(self.port, "0.0.0.0")
+    self.server = websocket.WebSocketsServer(self.port, self.host)
     self.server.set_fn_new_client(self.client_connect)
     self.server.set_fn_client_left(self.client_left)
     self.server.set_fn_message_received(self.message_received)

@@ -7,9 +7,9 @@ import antparsers
 
 
 class LogReplayer():
-  def __init__(self, logfile, speed, websocket_server):
-    self.logfile = logfile
-    self.speed = speed
+  def __init__(self, config, websocket_server):
+    self.logfile = config["logfile"]
+    self.speed = float(config["replay_speed"])
     self.websocket_server = websocket_server
     self.parsers = {
       "hr" : antparsers.Hr(),
@@ -33,4 +33,5 @@ class LogReplayer():
       values = parser.parse(line_j["data"])
       if values:
         for value in antparsers.Parser.to_json(values):
-          self.websocket_server.send_to_all(value)
+          if self.websocket_server:
+            self.websocket_server.send_to_all(value)
