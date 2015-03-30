@@ -1,18 +1,18 @@
 {
   "server" : {
-    "enabled" : 1,
+    "enabled" : true,
     "host" : "0.0.0.0",
     "port" : "13254"
   },
   "ant" : {
-    "enabled" : 1,
+    "enabled" : true,
     "devices" : ["hr", "speed_cad", "power"],
-    "raw_logging" : "True",
+    "raw_logging" : true,
     "log_dir" : "logs",
-    "verbose" : 1
+    "verbose" : true
   },
   "logreplayer" : {
-    "enabled" : 0,
+    "enabled" : false,
     "logfile" : "../data/20150327_1812_vo2max.txt",
     "replay_speed" : 100
   }
