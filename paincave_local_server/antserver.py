@@ -12,6 +12,7 @@ try:
   from ant.easy.channel import Channel
   from ant.base.message import Message
   from ant.easy.exception import AntException
+  from usb.core import USBError # TODO: let ant/base/driver.py throw an AntException
 except ImportError as e:
   print("Failed to load ant libs : \n%s" % e)
   print("Download ant-lib from https://github.com/simonvik/openant")
@@ -92,7 +93,19 @@ class AntServer():
     return self
 
   def _setup_channels(self):
-    self.antnode = Node()
+    try:
+      self.antnode = Node()
+    except USBError:
+      self.antnode = None
+      print("""
+
+Fatal error: Could not connect to ANT USB dongle
+Could not connect to ANT USB dongle.
+Please make sure no other application is using it, e.g. Garmin ANT Agent
+
+""")
+      return
+
     self.antnode.set_network_key(0x00, self.netkey)
 
     for device in self.ant_devices:
