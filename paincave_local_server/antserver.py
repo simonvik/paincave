@@ -72,7 +72,8 @@ class AntServer():
         except KeyboardInterrupt:
           pass
         finally:
-          antserver.stop()
+          if antserver:
+            antserver.stop()
         break
       except AntException:
         print("ERR: Failed to setup ant server. Retrying... %s" % i)
@@ -100,7 +101,6 @@ class AntServer():
       print("""
 
 Fatal error: Could not connect to ANT USB dongle
-Could not connect to ANT USB dongle.
 Please make sure no other application is using it, e.g. Garmin ANT Agent
 
 """)
