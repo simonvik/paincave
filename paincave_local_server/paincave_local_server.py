@@ -13,6 +13,7 @@ from datetime import datetime
 # local imports
 import antparsers
 from antserver import AntServer
+from controller import Controller
 from logreplayer import LogReplayer
 from websocketserver import WebsocketServer
 
@@ -20,7 +21,7 @@ from websocketserver import WebsocketServer
 class Paincave():
   def __init__(self):
     self._websocket_server = None
-    pass
+    self._controller = None
 
   def _parse_args(self):
     parser = argparse.ArgumentParser(description='Paincave server')
@@ -53,7 +54,7 @@ class Paincave():
 
   def _setup_and_start_antserver(self, config):
     try:
-      antserver = AntServer.setup_and_start(websocket_server = self._websocket_server,
+      antserver = AntServer.setup_and_start(controller = self._controller,
                                             config = config)
     except KeyboardInterrupt:
       pass
@@ -63,8 +64,10 @@ class Paincave():
     self._parse_args()
     self._load_config(self._args.config)
 
+    self._controller = Controller()
+
     if self._config["server"]["enabled"]:
-      self._websocket_server = WebsocketServer(self._config["server"])
+      self._websocket_server = WebsocketServer(self._config["server"], self._controller)
       self._websocket_server.start()
 
     try:

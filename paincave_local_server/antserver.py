@@ -6,6 +6,7 @@ from datetime import datetime
 
 # local imports
 import antparsers
+from controller import Controller
 
 try:
   from ant.easy.node import Node
@@ -19,12 +20,13 @@ except ImportError as e:
 
 
 class AntServer():
-  def __init__(self, netkey, ant_devices, websocket_server):
+  def __init__(self, netkey, ant_devices, controller):
     self.ant_devices = ant_devices
     self.channels = []
     self.netkey = netkey
     self.antnode = None
-    self.websocket_server = websocket_server
+    self.controller = controller
+    self.controller._ant_server = self
     self.ant_modes = {
       "speed_cad" : {
         "device_id" : 121,
@@ -59,12 +61,12 @@ class AntServer():
 
 
   @staticmethod
-  def setup_and_start(websocket_server, config):
+  def setup_and_start(controller, config):
     NETKEY = [0xb9, 0xa5, 0x21, 0xfb, 0xbd, 0x72, 0xc3, 0x45]
     antserver = None
     for i in range(1, 3):
       try:
-        antserver = AntServer(NETKEY, config["devices"], websocket_server)
+        antserver = AntServer(NETKEY, config["devices"], controller)
         antserver._log_raw_data = config["raw_logging"]
         antserver._log_decoded = config["verbose"]
         try:
@@ -146,7 +148,7 @@ Please make sure no other application is using it, e.g. Garmin ANT Agent
     values = parser.parse(data)
     if values:
       for value in antparsers.Parser.to_json(values):
-        self.websocket_server.send_to_all(value)
+        self.controller.send_to_all(value)
         if self._log_decoded:
           print(value)
 

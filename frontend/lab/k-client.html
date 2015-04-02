@@ -30,6 +30,11 @@ svg {
         document.addEventListener('DOMContentLoaded', function() {
             ws = new WebSocket("ws://localhost:13254/");
 
+            ws.onopen = function(e) {
+                ws.send("ohai");
+            }
+
+
             ws.onmessage = function(e) {
                 console.log(e.data);
                 msg = JSON.parse(e.data);
@@ -39,6 +44,7 @@ svg {
 
                 if(msg.event_type == "hr"){
                     hr.innerHTML = Math.round(msg.value);
+                    tick(msg.value)
                 }
 
                 if(msg.event_type == "cad"){
@@ -47,7 +53,6 @@ svg {
 
                 if(msg.event_type == "power"){
                     power.innerHTML = Math.round(msg.value);
-                    tick(msg.value)
                 }
 
             };
